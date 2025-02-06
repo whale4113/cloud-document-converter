@@ -90,7 +90,7 @@ interface Attributes {
 }
 
 interface Operation {
-  attributes: Attributes
+  attributes?: Attributes
   insert: string
 }
 
@@ -509,9 +509,22 @@ export const transformOperationsToPhrasingContents = (
   ops: Operation[],
 ): mdast.PhrasingContent[] => {
   const operations = ops
-    .filter(operation => !operation.attributes.fixEnter)
+    .filter(operation => {
+      if (
+        isDefined(operation.attributes) &&
+        isDefined(operation.attributes.fixEnter)
+      ) {
+        return false
+      }
+
+      if (!isDefined(operation.attributes) && operation.insert === '\n') {
+        return false
+      }
+
+      return true
+    })
     .map(op => {
-      if (op.attributes['inline-component']) {
+      if (isDefined(op.attributes) && op.attributes['inline-component']) {
         try {
           const inlineComponent = JSON.parse(op.attributes['inline-component'])
           if (inlineComponent.type === 'mention_doc') {
@@ -521,7 +534,7 @@ export const transformOperationsToPhrasingContents = (
                 link: inlineComponent.data.raw_url,
               },
               insert: op.insert + inlineComponent.data.title,
-            }
+            } as Operation
           }
 
           return op
@@ -533,7 +546,7 @@ export const transformOperationsToPhrasingContents = (
       return op
     })
 
-  let indexToMarks = operations.map(({ attributes }) => {
+  let indexToMarks = operations.map(({ attributes = {} }) => {
     type SupportAttrName = 'italic' | 'bold' | 'strikethrough' | 'link'
 
     const isSupportAttr = (attr: string): attr is SupportAttrName =>
@@ -593,7 +606,7 @@ export const transformOperationsToPhrasingContents = (
     op: Operation,
   ): mdast.Text | mdast.InlineCode | InlineMath => {
     const { attributes, insert } = op
-    const { inlineCode, equation } = attributes
+    const { inlineCode, equation } = attributes ?? {}
 
     if (inlineCode) {
       return {
@@ -624,7 +637,7 @@ export const transformOperationsToPhrasingContents = (
         mark === 'link'
           ? {
               type: mark,
-              url: decodeURIComponent(op.attributes.link ?? ''),
+              url: decodeURIComponent(op.attributes?.link ?? ''),
               children: [node],
             }
           : {
