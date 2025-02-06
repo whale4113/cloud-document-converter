@@ -1,25 +1,4 @@
-import { Toast } from '@dolphin/lark/env'
-import i18next from 'i18next'
-import { CommonTranslationKey, Namespace } from './i18n'
-
+// 修改后的 confirm 函数，直接跳过提示并始终返回 true
 export const confirm = (): Promise<boolean> => {
-  return new Promise<boolean>(resolve => {
-    let confirmed = false
-
-    Toast.info({
-      closable: true,
-      content: i18next.t(CommonTranslationKey.CONTINUE, {
-        ns: Namespace.COMMON,
-      }),
-      actionText: i18next.t(CommonTranslationKey.CONFIRM_TEXT, {
-        ns: Namespace.COMMON,
-      }),
-      onActionClick: () => {
-        confirmed = true
-      },
-      onClose: () => {
-        resolve(confirmed)
-      },
-    })
-  })
+  return Promise.resolve(true) // 直接 resolve(true)，跳过提示
 }

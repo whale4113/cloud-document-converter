@@ -1,13 +1,11 @@
-import i18next from 'i18next'
-import { Toast, Docx, docx, mdast } from '@dolphin/lark'
-import { fileSave, supported } from 'browser-fs-access'
+import { Docx, docx, mdast, Toast } from '@dolphin/lark'
 import { fs } from '@zip.js/zip.js'
 import normalizeFileName from 'filenamify/browser'
+import i18next from 'i18next'
 import { cluster } from 'radash'
 import { CommonTranslationKey, en, Namespace, zh } from '../common/i18n'
-import { confirm } from '../common/notification'
-import { legacyFileSave } from '../common/legacy'
 import { reportBug } from '../common/issue'
+import { legacyFileSave } from '../common/legacy'
 
 const DOWNLOAD_ABORTED = 'Download aborted'
 
@@ -434,25 +432,30 @@ const main = async () => {
     return content
   }
 
-  if (supported) {
-    if (!navigator.userActivation.isActive) {
-      const confirmed = await confirm()
-      if (!confirmed) {
-        throw new Error(DOWNLOAD_ABORTED)
-      }
-    }
+  // if (supported) {
+  //   if (!navigator.userActivation.isActive) {
+  //     const confirmed = await confirm()
+  //     if (!confirmed) {
+  //       throw new Error(DOWNLOAD_ABORTED)
+  //     }
+  //   }
 
-    await fileSave(toBlob(), {
-      fileName: filename,
-      extensions: [ext],
-    })
-  } else {
-    const blob = await toBlob()
+  //   await fileSave(toBlob(), {
+  //     fileName: filename,
+  //     extensions: [ext],
+  //   })
+  // } else {
+  //   const blob = await toBlob()
 
-    legacyFileSave(blob, {
-      fileName: filename,
-    })
-  }
+  //   legacyFileSave(blob, {
+  //     fileName: filename,
+  //   })
+  // }
+  const blob = await toBlob()
+  legacyFileSave(blob, {
+    // 强制使用 legacyFileSave
+    fileName: filename,
+  })
 }
 
 main()
