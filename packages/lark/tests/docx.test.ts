@@ -674,6 +674,21 @@ describe('transformOperationsToPhrasingContents()', () => {
       ])
     })
   })
+
+  describe('attributes not defined', () => {
+    test('text', () => {
+      expect(
+        transformOperationsToPhrasingContents([
+          {
+            insert: 'emphasis',
+          },
+          {
+            insert: '\n',
+          },
+        ]),
+      ).toStrictEqual([{ type: 'text', value: 'emphasis' }])
+    })
+  })
 })
 
 describe('transformer.transform()', () => {
