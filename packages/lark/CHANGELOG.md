@@ -1,5 +1,11 @@
 # @dolphin/lark
 
+## 2.4.2
+
+### Patch Changes
+
+- [#35](https://github.com/whale4113/cloud-document-converter/pull/35) [`358cf17`](https://github.com/whale4113/cloud-document-converter/commit/358cf171d0371b1f0330a28d6d04286746003d40) Thanks [@whale4113](https://github.com/whale4113)! - fix: Cannot read properties of undefined (reading 'fixEnter')
+
 ## 2.4.1
 
 ### Patch Changes
