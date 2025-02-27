@@ -24,3 +24,10 @@ export function isUndefinedOrNull(obj: unknown): obj is undefined | null {
 export function isUndefined(obj: unknown): obj is undefined {
   return typeof obj === 'undefined'
 }
+
+export const waitFor = (timeout = 400): Promise<void> =>
+  new Promise(resolve => {
+    setTimeout(() => {
+      resolve()
+    }, timeout)
+  })
