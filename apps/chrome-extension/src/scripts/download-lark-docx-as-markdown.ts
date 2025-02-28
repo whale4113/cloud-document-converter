@@ -1,5 +1,6 @@
 import i18next from 'i18next'
 import { Toast, Docx, docx, mdast } from '@dolphin/lark'
+import { waitFor } from '@dolphin/common'
 import { fileSave, supported } from 'browser-fs-access'
 import { fs } from '@zip.js/zip.js'
 import normalizeFileName from 'filenamify/browser'
@@ -23,6 +24,7 @@ const enum TranslationKey {
   IMAGE = 'image',
   FILE = 'file',
   CANCEL = 'cancel',
+  SCROLL_DOCUMENT = 'scroll_document',
 }
 
 enum ToastKey {
@@ -50,6 +52,7 @@ i18next.init({
         [TranslationKey.IMAGE]: 'Image',
         [TranslationKey.FILE]: 'File',
         [TranslationKey.CANCEL]: 'Cancel',
+        [TranslationKey.SCROLL_DOCUMENT]: 'Scrolling to load document',
       },
       ...en,
     },
@@ -69,6 +72,7 @@ i18next.init({
         [TranslationKey.IMAGE]: '图片',
         [TranslationKey.FILE]: '文件',
         [TranslationKey.CANCEL]: '取消',
+        [TranslationKey.SCROLL_DOCUMENT]: '滚动中，以便加载文档',
       },
       ...zh,
     },
@@ -346,15 +350,44 @@ const main = async () => {
   if (!docx.rootBlock) {
     Toast.warning({ content: i18next.t(TranslationKey.NOT_SUPPORT) })
 
-    return
+    throw new Error(DOWNLOAD_ABORTED)
   }
 
-  if (!docx.isReady()) {
+  docx.recordScrollTop()
+
+  let tryTimes = 0
+  const maxTryTimes = 100
+
+  if (!docx.isReady({ checkWhiteboard: true })) {
+    Toast.loading({
+      content: i18next.t(TranslationKey.SCROLL_DOCUMENT),
+      keepAlive: true,
+      key: TranslationKey.SCROLL_DOCUMENT,
+      actionText: i18next.t(TranslationKey.CANCEL),
+      onActionClick: () => {
+        tryTimes = maxTryTimes
+      },
+    })
+  }
+
+  while (!docx.isReady({ checkWhiteboard: true }) && tryTimes <= maxTryTimes) {
+    docx.scrollTo({
+      cacheScrollTop: true,
+    })
+
+    await waitFor(400)
+
+    tryTimes++
+  }
+
+  Toast.remove(TranslationKey.SCROLL_DOCUMENT)
+
+  if (!docx.isReady({ checkWhiteboard: true })) {
     Toast.warning({
       content: i18next.t(TranslationKey.CONTENT_LOADING),
     })
 
-    return
+    throw new Error(DOWNLOAD_ABORTED)
   }
 
   const { root, images, files } = docx.intoMarkdownAST({
@@ -385,8 +418,11 @@ const main = async () => {
     const zipFileContent = async () => {
       const zipFs = new fs.FS()
 
+      const imgs = images.filter(image => image.data?.fetchSources)
+      const diagrams = images.filter(image => image.data?.fetchBlob)
+
       const results = await Promise.all([
-        downloadFiles(images, {
+        downloadFiles(imgs, {
           batchSize: 15,
           onProgress: progress => {
             Toast.loading({
@@ -401,6 +437,10 @@ const main = async () => {
           onComplete: () => {
             Toast.remove(TranslationKey.IMAGE)
           },
+        }),
+        // Diagrams must be downloaded one by one
+        downloadFiles(diagrams, {
+          batchSize: 1,
         }),
         downloadFiles(files, {
           onProgress: progress => {
@@ -430,6 +470,8 @@ const main = async () => {
     }
 
     const content = isZip ? await zipFileContent() : singleFileContent()
+
+    docx.recoverScrollTop()
 
     return content
   }
