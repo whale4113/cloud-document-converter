@@ -6,6 +6,7 @@ interface ToastOptions {
   keepAlive?: boolean
   closable?: boolean
   actionText?: string
+  duration?: number
   onActionClick?: () => void
   onClose?: () => void
 }
