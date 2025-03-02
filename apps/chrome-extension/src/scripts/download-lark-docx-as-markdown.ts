@@ -226,7 +226,7 @@ const downloadImage = async (
                 Toast.loading({
                   content: i18next.t(TranslationKey.DOWNLOADING_FILE, {
                     name,
-                    progress: Math.floor(progress * 100),
+                    progress: Math.floor(progress * OneHundred),
                   }),
                   keepAlive: true,
                   key: filename,
@@ -303,7 +303,7 @@ const downloadFile = async (
               Toast.loading({
                 content: i18next.t(TranslationKey.DOWNLOADING_FILE, {
                   name,
-                  progress: Math.floor(progress * 100),
+                  progress: Math.floor(progress * OneHundred),
                 }),
                 keepAlive: true,
                 key: filename,
@@ -507,7 +507,7 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
   })
 
   const recommendName = docx.pageTitle
-    ? normalizeFileName(docx.pageTitle.slice(0, 100))
+    ? normalizeFileName(docx.pageTitle.slice(0, OneHundred))
     : 'doc'
   const isZip = images.length > 0 || files.length > 0
   const ext = isZip ? '.zip' : '.md'
@@ -539,7 +539,7 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
             Toast.loading({
               content: i18next.t(TranslationKey.DOWNLOAD_PROGRESS, {
                 name: i18next.t(TranslationKey.IMAGE),
-                progress: Math.floor(progress * 100),
+                progress: Math.floor(progress * OneHundred),
               }),
               keepAlive: true,
               key: TranslationKey.IMAGE,
@@ -560,7 +560,7 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
             Toast.loading({
               content: i18next.t(TranslationKey.DOWNLOAD_PROGRESS, {
                 name: i18next.t(TranslationKey.FILE),
-                progress: Math.floor(progress * 100),
+                progress: Math.floor(progress * OneHundred),
               }),
               keepAlive: true,
               key: TranslationKey.FILE,

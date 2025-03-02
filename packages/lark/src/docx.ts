@@ -5,6 +5,7 @@ import {
   compare,
   isDefined,
   waitForSelector,
+  OneHundred,
   Second,
 } from '@dolphin/common'
 import { toMarkdown } from 'mdast-util-to-markdown'
@@ -354,7 +355,7 @@ interface IframeBlock extends Block {
 }
 
 const iframeToHTML = (iframe: IframeBlock): mdast.Html | null => {
-  const { height = 400, component = {} } = iframe.snapshot.iframe
+  const { height = 4 * OneHundred, component = {} } = iframe.snapshot.iframe
   const { url } = component
 
   if (!url) {
