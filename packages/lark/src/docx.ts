@@ -1,6 +1,12 @@
 import * as mdast from 'mdast'
 import chunk from 'lodash-es/chunk'
-import { imageDataToBlob, compare, isDefined } from '@dolphin/common'
+import {
+  imageDataToBlob,
+  compare,
+  isDefined,
+  waitForSelector,
+  Second,
+} from '@dolphin/common'
 import { toMarkdown } from 'mdast-util-to-markdown'
 import { gfmStrikethroughToMarkdown } from 'mdast-util-gfm-strikethrough'
 import { gfmTaskListItemToMarkdown } from 'mdast-util-gfm-task-list-item'
@@ -986,6 +992,14 @@ export class Transformer {
                   console.error(error)
                 }
 
+                try {
+                  await waitForSelector(`[data-block-id="${block.id}"]`, {
+                    timeout: Second,
+                  })
+                } catch (error) {
+                  console.error(error)
+                }
+
                 const imageDataWrapper = await whiteboardToImageData(whiteboard)
                 if (!imageDataWrapper) return null
 
@@ -1155,7 +1169,11 @@ export class Docx {
         const prerequisite = block.snapshot.type !== 'pending'
 
         if (block.type === BlockType.WHITEBOARD && checkWhiteboard) {
-          return prerequisite && block.whiteboardBlock !== undefined
+          return (
+            prerequisite &&
+            block.whiteboardBlock !== undefined &&
+            this.blockIdToScrollTop.get(block.id) !== undefined
+          )
         }
 
         return prerequisite
@@ -1203,7 +1221,7 @@ export class Docx {
 
       container.scrollTo({
         left,
-        top,
+        top: Math.min(top, container.scrollHeight),
         behavior,
       })
     }

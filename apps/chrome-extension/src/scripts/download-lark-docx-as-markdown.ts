@@ -1,6 +1,6 @@
 import i18next from 'i18next'
 import { Toast, Docx, docx, mdast } from '@dolphin/lark'
-import { waitFor } from '@dolphin/common'
+import { OneHundred, Second, waitFor } from '@dolphin/common'
 import { fileSave, supported } from 'browser-fs-access'
 import { fs } from '@zip.js/zip.js'
 import normalizeFileName from 'filenamify/browser'
@@ -429,21 +429,28 @@ const downloadFiles = async (
   return results ?? []
 }
 
-const main = async (options: { signal?: AbortSignal } = {}) => {
-  const { signal } = options
+interface PrepareResult {
+  isReady: boolean
+  recoverScrollTop?: () => void
+}
 
-  if (!docx.rootBlock) {
-    Toast.warning({ content: i18next.t(TranslationKey.NOT_SUPPORT) })
+const prepare = async (): Promise<PrepareResult> => {
+  const checkIsReady = () => docx.isReady({ checkWhiteboard: true })
 
-    throw new Error(DOWNLOAD_ABORTED)
-  }
+  let recoverScrollTop
 
-  docx.recordScrollTop()
+  if (!checkIsReady()) {
+    docx.recordScrollTop()
+    recoverScrollTop = () => docx.recoverScrollTop()
 
-  let tryTimes = 0
-  const maxTryTimes = 100
+    let top = 0
+    docx.scrollTo({
+      top,
+    })
 
-  if (!docx.isReady({ checkWhiteboard: true })) {
+    const maxTryTimes = OneHundred
+    let tryTimes = 0
+
     Toast.loading({
       content: i18next.t(TranslationKey.SCROLL_DOCUMENT),
       keepAlive: true,
@@ -453,21 +460,40 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
         tryTimes = maxTryTimes
       },
     })
+
+    while (!checkIsReady() && tryTimes <= maxTryTimes) {
+      docx.scrollTo({
+        top,
+        cacheScrollTop: true,
+      })
+
+      await waitFor(0.4 * Second)
+
+      tryTimes++
+      top += (docx.container?.clientHeight ?? 4 * OneHundred) * 2
+    }
+
+    Toast.remove(TranslationKey.SCROLL_DOCUMENT)
   }
 
-  while (!docx.isReady({ checkWhiteboard: true }) && tryTimes <= maxTryTimes) {
-    docx.scrollTo({
-      cacheScrollTop: true,
-    })
+  return {
+    isReady: checkIsReady(),
+    recoverScrollTop,
+  }
+}
 
-    await waitFor(400)
+const main = async (options: { signal?: AbortSignal } = {}) => {
+  const { signal } = options
 
-    tryTimes++
+  if (!docx.rootBlock) {
+    Toast.warning({ content: i18next.t(TranslationKey.NOT_SUPPORT) })
+
+    throw new Error(DOWNLOAD_ABORTED)
   }
 
-  Toast.remove(TranslationKey.SCROLL_DOCUMENT)
+  const { isReady, recoverScrollTop } = await prepare()
 
-  if (!docx.isReady({ checkWhiteboard: true })) {
+  if (!isReady) {
     Toast.warning({
       content: i18next.t(TranslationKey.CONTENT_LOADING),
     })
@@ -559,7 +585,7 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
 
     const content = isZip ? await zipFileContent() : singleFileContent()
 
-    docx.recoverScrollTop()
+    recoverScrollTop?.()
 
     return content
   }
