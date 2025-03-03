@@ -1,5 +1,19 @@
 # @dolphin/chrome-extension
 
+## 1.9.2
+
+### Patch Changes
+
+- [#41](https://github.com/whale4113/cloud-document-converter/pull/41) [`8b6d9f0`](https://github.com/whale4113/cloud-document-converter/commit/8b6d9f0606ae413d485a48ed352f25fce920427e) Thanks [@whale4113](https://github.com/whale4113)! - fix: pictures and files still download when downloading is canceled
+
+- [#41](https://github.com/whale4113/cloud-document-converter/pull/41) [`0f38763`](https://github.com/whale4113/cloud-document-converter/commit/0f3876318a389423c8bd1ad9ec7078d6a3a11484) Thanks [@whale4113](https://github.com/whale4113)! - fix: the scroll position of a whiteboard's view element may not be recorded
+
+- [#41](https://github.com/whale4113/cloud-document-converter/pull/41) [`64b3b39`](https://github.com/whale4113/cloud-document-converter/commit/64b3b398bfe48bcbccdd71388e08788ce956d496) Thanks [@whale4113](https://github.com/whale4113)! - fix: missing diagrams when downloading long documents
+
+- Updated dependencies [[`73917d7`](https://github.com/whale4113/cloud-document-converter/commit/73917d76bfbebb81729680b232ab5504bde724b2), [`586ec7a`](https://github.com/whale4113/cloud-document-converter/commit/586ec7a368e5c21da5b721563602fabb5ee4c494), [`13bb896`](https://github.com/whale4113/cloud-document-converter/commit/13bb896222f0e6fbc1ef27cbf8be87601d6184e9)]:
+  - @dolphin/common@2.2.0
+  - @dolphin/lark@2.5.0
+
 ## 1.9.1
 
 ### Patch Changes
