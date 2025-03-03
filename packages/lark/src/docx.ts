@@ -1,6 +1,13 @@
 import * as mdast from 'mdast'
 import chunk from 'lodash-es/chunk'
-import { imageDataToBlob, compare, isDefined } from '@dolphin/common'
+import {
+  imageDataToBlob,
+  compare,
+  isDefined,
+  waitForSelector,
+  OneHundred,
+  Second,
+} from '@dolphin/common'
 import { toMarkdown } from 'mdast-util-to-markdown'
 import { gfmStrikethroughToMarkdown } from 'mdast-util-gfm-strikethrough'
 import { gfmTaskListItemToMarkdown } from 'mdast-util-gfm-task-list-item'
@@ -106,6 +113,7 @@ interface BlockSnapshot {
 }
 
 interface Block<T extends Blocks = Blocks> {
+  id: number
   type: BlockType
   zoneState?: BlockZoneState
   record?: { id: string }
@@ -251,6 +259,11 @@ interface SyncedSource extends Block {
   type: BlockType.SYNCED_SOURCE
 }
 
+interface ImageDataWrapper {
+  data: ImageData
+  release: () => void
+}
+
 interface RatioApp {
   ratioAppProxy: {
     getOriginImageDataByNodeId: (
@@ -258,7 +271,7 @@ interface RatioApp {
       o: [''],
       r: false,
       n: 2,
-    ) => Promise<{ data: ImageData } | null>
+    ) => Promise<ImageDataWrapper | null>
   }
 }
 
@@ -342,7 +355,7 @@ interface IframeBlock extends Block {
 }
 
 const iframeToHTML = (iframe: IframeBlock): mdast.Html | null => {
-  const { height = 400, component = {} } = iframe.snapshot.iframe
+  const { height = 4 * OneHundred, component = {} } = iframe.snapshot.iframe
   const { url } = component
 
   if (!url) {
@@ -665,7 +678,7 @@ const fetchImageSources = (imageBlock: ImageBlock) => {
 
 const whiteboardToImageData = async (
   whiteboard: Whiteboard,
-): Promise<ImageData | null> => {
+): Promise<ImageDataWrapper | null> => {
   if (!whiteboard.whiteboardBlock) return null
 
   const { isolateEnv } = whiteboard.whiteboardBlock
@@ -673,6 +686,7 @@ const whiteboardToImageData = async (
   if (!isolateEnv.hasRatioApp()) return null
 
   const rationApp = isolateEnv.getRatioApp()
+
   const imageData = await rationApp.ratioAppProxy.getOriginImageDataByNodeId(
     24,
     [''],
@@ -682,7 +696,7 @@ const whiteboardToImageData = async (
 
   if (!imageData) return null
 
-  return imageData.data
+  return imageData
 }
 
 const evaluateAlt = (caption?: Caption) =>
@@ -719,12 +733,18 @@ type Mutate<T extends Block> = T extends PageBlock
 interface TransformerOptions {
   /**
    * Enable convert whiteboard to image.
+   * @default false
    */
-  whiteboard: boolean
+  whiteboard?: boolean
   /**
    * Enable convert file to resource link.
+   * @default false
    */
-  file: boolean
+  file?: boolean
+  /**
+   * Scroll document to specific block.
+   */
+  scrollTo?: (blockId: number) => void
 }
 
 interface TransformResult<T> {
@@ -967,10 +987,26 @@ export class Transformer {
             alt: evaluateAlt(whiteboard.snapshot.caption),
             data: {
               fetchBlob: async () => {
-                const imageData = await whiteboardToImageData(whiteboard)
-                if (!imageData) return null
+                try {
+                  this.options.scrollTo?.(whiteboard.id)
+                } catch (error) {
+                  console.error(error)
+                }
 
-                return await imageDataToBlob(imageData)
+                try {
+                  await waitForSelector(`[data-block-id="${block.id}"]`, {
+                    timeout: Second,
+                  })
+                } catch (error) {
+                  console.error(error)
+                }
+
+                const imageDataWrapper = await whiteboardToImageData(whiteboard)
+                if (!imageDataWrapper) return null
+
+                return await imageDataToBlob(imageDataWrapper.data, {
+                  onDispose: imageDataWrapper.release,
+                })
               },
             },
           }
@@ -1078,6 +1114,9 @@ export class Transformer {
 }
 
 export class Docx {
+  private blockIdToScrollTop: Map<number, number> = new Map()
+  private scrollTop: number = 0
+
   static stringify(root: mdast.Root) {
     return toMarkdown(root, {
       extensions: [
@@ -1109,21 +1148,108 @@ export class Docx {
     return trimEndEnter(this.rootBlock.zoneState.allText)
   }
 
-  isReady() {
+  get container() {
+    const container = document.querySelector('#mainBox .bear-web-x-container')
+
+    return container
+  }
+
+  isReady(
+    options: {
+      /**
+       * @default false
+       */
+      checkWhiteboard?: boolean
+    } = {},
+  ) {
+    const { checkWhiteboard = false } = options
+
     return (
       !!this.rootBlock &&
-      this.rootBlock.children.every(block => block.snapshot.type !== 'pending')
+      this.rootBlock.children.every(block => {
+        const prerequisite = block.snapshot.type !== 'pending'
+
+        if (block.type === BlockType.WHITEBOARD && checkWhiteboard) {
+          return (
+            prerequisite &&
+            block.whiteboardBlock !== undefined &&
+            this.blockIdToScrollTop.get(block.id) !== undefined
+          )
+        }
+
+        return prerequisite
+      })
     )
   }
 
+  recordScrollTop() {
+    this.scrollTop = this.container?.scrollTop ?? 0
+  }
+
+  recoverScrollTop() {
+    this.scrollTo({
+      top: this.scrollTop,
+    })
+  }
+
+  scrollTo(
+    options: ScrollToOptions & {
+      /**
+       * @default false
+       */
+      cacheScrollTop?: boolean
+    } = {},
+  ) {
+    const container = this.container
+    if (container) {
+      const {
+        left,
+        top = container.scrollHeight,
+        behavior = 'smooth',
+        cacheScrollTop = false,
+      } = options
+
+      if (cacheScrollTop) {
+        this.rootBlock?.children.forEach(block => {
+          if (block.type === BlockType.WHITEBOARD) {
+            const el = document.querySelector(`[data-block-id="${block.id}"]`)
+            if (el) {
+              this.blockIdToScrollTop.set(block.id, container.scrollTop)
+            }
+          }
+        })
+      }
+
+      container.scrollTo({
+        left,
+        top: Math.min(top, container.scrollHeight),
+        behavior,
+      })
+    }
+  }
+
   intoMarkdownAST(
-    transformerOptions?: TransformerOptions,
+    transformerOptions: TransformerOptions = {},
   ): TransformResult<mdast.Root> {
     if (!this.rootBlock) {
       return { root: { type: 'root', children: [] }, images: [], files: [] }
     }
 
-    const transformer = new Transformer(transformerOptions)
+    const defaultScrollTo = (blockId: number): void => {
+      const cacheScrollTop = this.blockIdToScrollTop.get(blockId)
+      if (cacheScrollTop === undefined) {
+        throw new Error(`Block ${blockId} no cache scroll top.`)
+      }
+
+      this.scrollTo({
+        top: cacheScrollTop,
+      })
+    }
+
+    const transformer = new Transformer({
+      scrollTo: defaultScrollTo,
+      ...transformerOptions,
+    })
 
     return transformer.transform(this.rootBlock)
   }

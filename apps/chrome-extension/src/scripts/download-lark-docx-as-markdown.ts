@@ -1,5 +1,6 @@
 import i18next from 'i18next'
 import { Toast, Docx, docx, mdast } from '@dolphin/lark'
+import { OneHundred, Second, waitFor } from '@dolphin/common'
 import { fileSave, supported } from 'browser-fs-access'
 import { fs } from '@zip.js/zip.js'
 import normalizeFileName from 'filenamify/browser'
@@ -8,6 +9,7 @@ import { CommonTranslationKey, en, Namespace, zh } from '../common/i18n'
 import { confirm } from '../common/notification'
 import { legacyFileSave } from '../common/legacy'
 import { reportBug } from '../common/issue'
+import { withSignal } from '../common/utils'
 
 const DOWNLOAD_ABORTED = 'Download aborted'
 
@@ -23,10 +25,12 @@ const enum TranslationKey {
   IMAGE = 'image',
   FILE = 'file',
   CANCEL = 'cancel',
+  SCROLL_DOCUMENT = 'scroll_document',
 }
 
 enum ToastKey {
   DOWNLOADING = 'downloading',
+  REPORT_BUG = 'report_bug',
 }
 
 i18next.init({
@@ -50,6 +54,7 @@ i18next.init({
         [TranslationKey.IMAGE]: 'Image',
         [TranslationKey.FILE]: 'File',
         [TranslationKey.CANCEL]: 'Cancel',
+        [TranslationKey.SCROLL_DOCUMENT]: 'Scrolling to load document',
       },
       ...en,
     },
@@ -69,6 +74,7 @@ i18next.init({
         [TranslationKey.IMAGE]: '图片',
         [TranslationKey.FILE]: '文件',
         [TranslationKey.CANCEL]: '取消',
+        [TranslationKey.SCROLL_DOCUMENT]: '滚动中，以便加载文档',
       },
       ...zh,
     },
@@ -154,143 +160,195 @@ async function toBlob(
 
 const downloadImage = async (
   image: mdast.Image,
+  options: {
+    signal?: AbortSignal
+  } = {},
 ): Promise<DownloadResult | null> => {
   if (!image.data) return null
 
+  const { signal } = options
+
   const { name: originName, fetchSources, fetchBlob } = image.data
 
-  try {
-    // whiteboard
-    if (fetchBlob) {
-      const content = await fetchBlob()
-      if (!content) return null
-
-      const name = uniqueFileName('diagram.png')
-      const filename = `images/${name}`
-
-      image.url = filename
-
-      return {
-        filename,
-        content,
-      }
-    }
-
-    // image
-    if (originName && fetchSources) {
-      const sources = await fetchSources()
-
-      if (!sources) return null
-
-      const name = uniqueFileName(originName)
-      const filename = `images/${name}`
-
-      const { src } = sources
-      const response = await fetch(src)
+  const result = await withSignal(
+    async aborted => {
       try {
-        const blob = await toBlob(response, {
-          onProgress: progress => {
-            Toast.loading({
-              content: i18next.t(TranslationKey.DOWNLOADING_FILE, {
-                name,
-                progress: Math.floor(progress * 100),
-              }),
-              keepAlive: true,
-              key: filename,
-            })
-          },
-        })
+        // whiteboard
+        if (fetchBlob) {
+          if (aborted.current) {
+            return null
+          }
 
-        image.url = filename
+          const content = await fetchBlob()
+          if (!content) return null
 
-        return {
-          filename,
-          content: blob,
+          const name = uniqueFileName('diagram.png')
+          const filename = `images/${name}`
+
+          image.url = filename
+
+          return {
+            filename,
+            content,
+          }
         }
-      } finally {
-        Toast.remove(filename)
+
+        // image
+        if (originName && fetchSources) {
+          if (aborted.current) {
+            return null
+          }
+          const sources = await fetchSources()
+          if (!sources) return null
+
+          const name = uniqueFileName(originName)
+          const filename = `images/${name}`
+
+          if (aborted.current) {
+            return null
+          }
+          const { src } = sources
+          const response = await fetch(src, {
+            signal,
+          })
+          try {
+            if (aborted.current) {
+              return null
+            }
+            const blob = await toBlob(response, {
+              onProgress: progress => {
+                if (aborted.current) {
+                  Toast.remove(filename)
+
+                  return
+                }
+
+                Toast.loading({
+                  content: i18next.t(TranslationKey.DOWNLOADING_FILE, {
+                    name,
+                    progress: Math.floor(progress * OneHundred),
+                  }),
+                  keepAlive: true,
+                  key: filename,
+                })
+              },
+            })
+
+            image.url = filename
+
+            return {
+              filename,
+              content: blob,
+            }
+          } finally {
+            Toast.remove(filename)
+          }
+        }
+
+        return null
+      } catch (error) {
+        const isAborted =
+          aborted.current ||
+          (error instanceof DOMException && error.name === 'AbortError')
+        if (!isAborted) {
+          Toast.error({
+            content: i18next.t(TranslationKey.FAILED_TO_DOWNLOAD, {
+              name: originName,
+            }),
+            actionText: i18next.t(CommonTranslationKey.CONFIRM_REPORT_BUG, {
+              ns: Namespace.COMMON,
+            }),
+            onActionClick: () => {
+              reportBug(error)
+            },
+          })
+        }
+
+        return null
       }
-    }
+    },
+    { signal },
+  )
 
-    return null
-  } catch (error) {
-    Toast.error({
-      content: i18next.t(TranslationKey.FAILED_TO_DOWNLOAD, {
-        name: originName,
-      }),
-      actionText: i18next.t(CommonTranslationKey.CONFIRM_REPORT_BUG, {
-        ns: Namespace.COMMON,
-      }),
-      onActionClick: () => {
-        reportBug(error)
-      },
-    })
-
-    return null
-  }
+  return result
 }
 
 const downloadFile = async (
   file: mdast.Link,
+  options: {
+    signal?: AbortSignal
+  } = {},
 ): Promise<DownloadResult | null> => {
   if (!file.data || !file.data.name || !file.data.fetchFile) return null
 
+  const { signal } = options
+
   const { name, fetchFile } = file.data
 
-  try {
-    const filename = `files/${uniqueFileName(name)}`
+  let controller = new AbortController()
 
-    const controller = new AbortController()
-
-    const cancel = () => {
-      controller.abort()
-    }
-
-    const response = await fetchFile({ signal: controller.signal })
-    try {
-      const blob = await toBlob(response, {
-        onProgress: progress => {
-          Toast.loading({
-            content: i18next.t(TranslationKey.DOWNLOADING_FILE, {
-              name,
-              progress: Math.floor(progress * 100),
-            }),
-            keepAlive: true,
-            key: filename,
-            actionText: i18next.t(TranslationKey.CANCEL),
-            onActionClick: cancel,
-          })
-        },
-      })
-
-      file.url = filename
-
-      return {
-        filename,
-        content: blob,
-      }
-    } finally {
-      Toast.remove(filename)
-    }
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      return null
-    }
-
-    Toast.error({
-      content: i18next.t(TranslationKey.FAILED_TO_DOWNLOAD, {
-        name,
-      }),
-      actionText: i18next.t(CommonTranslationKey.CONFIRM_REPORT_BUG, {
-        ns: Namespace.COMMON,
-      }),
-      onActionClick: () => {
-        reportBug(error)
-      },
-    })
-
-    return null
+  const cancel = () => {
+    controller.abort()
   }
+
+  const result = await withSignal(
+    async () => {
+      try {
+        const filename = `files/${uniqueFileName(name)}`
+
+        const response = await fetchFile({ signal: controller.signal })
+        try {
+          const blob = await toBlob(response, {
+            onProgress: progress => {
+              Toast.loading({
+                content: i18next.t(TranslationKey.DOWNLOADING_FILE, {
+                  name,
+                  progress: Math.floor(progress * OneHundred),
+                }),
+                keepAlive: true,
+                key: filename,
+                actionText: i18next.t(TranslationKey.CANCEL),
+                onActionClick: cancel,
+              })
+            },
+          })
+
+          file.url = filename
+
+          return {
+            filename,
+            content: blob,
+          }
+        } finally {
+          Toast.remove(filename)
+        }
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          return null
+        }
+
+        Toast.error({
+          content: i18next.t(TranslationKey.FAILED_TO_DOWNLOAD, {
+            name,
+          }),
+          actionText: i18next.t(CommonTranslationKey.CONFIRM_REPORT_BUG, {
+            ns: Namespace.COMMON,
+          }),
+          onActionClick: () => {
+            reportBug(error)
+          },
+        })
+
+        return null
+      }
+    },
+    { signal, onAbort: cancel },
+  )
+
+  // @ts-expect-error remove reference
+  controller = null
+
+  return result
 }
 
 interface DownloadResult {
@@ -307,54 +365,140 @@ const downloadFiles = async (
      * @default 3
      */
     batchSize?: number
+    signal?: AbortSignal
   } = {},
 ): Promise<DownloadResult[]> => {
-  const { onProgress, onComplete, batchSize = 3 } = options
+  const { onProgress, onComplete, batchSize = 3, signal } = options
 
-  const results: DownloadResult[] = []
-
-  const totalSize = files.length
-  let downloadedSize = 0
-
-  for await (const batch of cluster(files, batchSize)) {
-    await Promise.allSettled(
-      batch.map(async file => {
-        try {
-          const result =
-            file.type === 'image'
-              ? await downloadImage(file)
-              : await downloadFile(file)
-
-          if (result) {
-            results.push(result)
-          }
-        } finally {
-          downloadedSize++
-
-          onProgress?.(downloadedSize / totalSize)
-        }
-      }),
-    )
+  let completeEventCalled = false
+  const onCompleteOnce = () => {
+    if (!completeEventCalled) {
+      completeEventCalled = true
+      onComplete?.()
+    }
   }
 
-  onComplete?.()
+  const results = await withSignal(
+    async aborted => {
+      const _results: DownloadResult[] = []
 
-  return results
+      const totalSize = files.length
+      let downloadedSize = 0
+
+      for (const batch of cluster(files, batchSize)) {
+        if (aborted.current) {
+          break
+        }
+
+        await Promise.allSettled(
+          batch.map(async file => {
+            if (aborted.current) {
+              return
+            }
+
+            try {
+              const result =
+                file.type === 'image'
+                  ? await downloadImage(file, { signal })
+                  : await downloadFile(file, { signal })
+
+              if (result) {
+                _results.push(result)
+              }
+            } finally {
+              downloadedSize++
+
+              if (!aborted.current) {
+                onProgress?.(downloadedSize / totalSize)
+              }
+            }
+          }),
+        )
+      }
+
+      onCompleteOnce()
+
+      return _results
+    },
+    {
+      signal,
+      onAbort: onCompleteOnce,
+    },
+  )
+
+  return results ?? []
 }
 
-const main = async () => {
+interface PrepareResult {
+  isReady: boolean
+  recoverScrollTop?: () => void
+}
+
+const prepare = async (): Promise<PrepareResult> => {
+  const checkIsReady = () => docx.isReady({ checkWhiteboard: true })
+
+  let recoverScrollTop
+
+  if (!checkIsReady()) {
+    docx.recordScrollTop()
+    recoverScrollTop = () => docx.recoverScrollTop()
+
+    let top = 0
+    docx.scrollTo({
+      top,
+    })
+
+    const maxTryTimes = OneHundred
+    let tryTimes = 0
+
+    Toast.loading({
+      content: i18next.t(TranslationKey.SCROLL_DOCUMENT),
+      keepAlive: true,
+      key: TranslationKey.SCROLL_DOCUMENT,
+      actionText: i18next.t(TranslationKey.CANCEL),
+      onActionClick: () => {
+        tryTimes = maxTryTimes
+      },
+    })
+
+    while (!checkIsReady() && tryTimes <= maxTryTimes) {
+      docx.scrollTo({
+        top,
+        cacheScrollTop: true,
+      })
+
+      await waitFor(0.4 * Second)
+
+      tryTimes++
+      top += (docx.container?.clientHeight ?? 4 * OneHundred) * 2
+    }
+
+    Toast.remove(TranslationKey.SCROLL_DOCUMENT)
+  }
+
+  return {
+    isReady: checkIsReady(),
+    recoverScrollTop,
+  }
+}
+
+const main = async (options: { signal?: AbortSignal } = {}) => {
+  const { signal } = options
+
   if (!docx.rootBlock) {
     Toast.warning({ content: i18next.t(TranslationKey.NOT_SUPPORT) })
 
-    return
+    throw new Error(DOWNLOAD_ABORTED)
   }
 
-  if (!docx.isReady()) {
+  const { isReady, recoverScrollTop } = await prepare()
+
+  if (!isReady) {
     Toast.warning({
       content: i18next.t(TranslationKey.CONTENT_LOADING),
     })
 
-    return
+    throw new Error(DOWNLOAD_ABORTED)
   }
 
   const { root, images, files } = docx.intoMarkdownAST({
@@ -363,7 +507,7 @@ const main = async () => {
   })
 
   const recommendName = docx.pageTitle
-    ? normalizeFileName(docx.pageTitle.slice(0, 100))
+    ? normalizeFileName(docx.pageTitle.slice(0, OneHundred))
     : 'doc'
   const isZip = images.length > 0 || files.length > 0
   const ext = isZip ? '.zip' : '.md'
@@ -385,14 +529,17 @@ const main = async () => {
     const zipFileContent = async () => {
       const zipFs = new fs.FS()
 
+      const imgs = images.filter(image => image.data?.fetchSources)
+      const diagrams = images.filter(image => image.data?.fetchBlob)
+
       const results = await Promise.all([
-        downloadFiles(images, {
+        downloadFiles(imgs, {
           batchSize: 15,
           onProgress: progress => {
             Toast.loading({
               content: i18next.t(TranslationKey.DOWNLOAD_PROGRESS, {
                 name: i18next.t(TranslationKey.IMAGE),
-                progress: Math.floor(progress * 100),
+                progress: Math.floor(progress * OneHundred),
               }),
               keepAlive: true,
               key: TranslationKey.IMAGE,
@@ -401,13 +548,19 @@ const main = async () => {
           onComplete: () => {
             Toast.remove(TranslationKey.IMAGE)
           },
+          signal,
+        }),
+        // Diagrams must be downloaded one by one
+        downloadFiles(diagrams, {
+          batchSize: 1,
+          signal,
         }),
         downloadFiles(files, {
           onProgress: progress => {
             Toast.loading({
               content: i18next.t(TranslationKey.DOWNLOAD_PROGRESS, {
                 name: i18next.t(TranslationKey.FILE),
-                progress: Math.floor(progress * 100),
+                progress: Math.floor(progress * OneHundred),
               }),
               keepAlive: true,
               key: TranslationKey.FILE,
@@ -416,6 +569,7 @@ const main = async () => {
           onComplete: () => {
             Toast.remove(TranslationKey.FILE)
           },
+          signal,
         }),
       ])
       results.flat(1).forEach(({ filename, content }) => {
@@ -430,6 +584,8 @@ const main = async () => {
     }
 
     const content = isZip ? await zipFileContent() : singleFileContent()
+
+    recoverScrollTop?.()
 
     return content
   }
@@ -455,25 +611,40 @@ const main = async () => {
   }
 }
 
-main()
+let controller = new AbortController()
+main({
+  signal: controller.signal,
+})
   .then(() => {
     Toast.success({
       content: i18next.t(TranslationKey.DOWNLOAD_COMPLETE),
     })
   })
   .catch((error: DOMException | TypeError | Error) => {
-    if (error.name !== 'AbortError' && error.message !== DOWNLOAD_ABORTED) {
+    const aborted =
+      error.name === 'AbortError' || error.message === DOWNLOAD_ABORTED
+
+    if (aborted) {
+      controller.abort()
+    } else {
       Toast.error({
+        key: ToastKey.REPORT_BUG,
         content: String(error),
         actionText: i18next.t(CommonTranslationKey.CONFIRM_REPORT_BUG, {
           ns: Namespace.COMMON,
         }),
+        duration: Number.POSITIVE_INFINITY,
         onActionClick: () => {
           reportBug(error)
+
+          Toast.remove(ToastKey.REPORT_BUG)
         },
       })
     }
   })
   .finally(() => {
     Toast.remove(ToastKey.DOWNLOADING)
+
+    // @ts-expect-error remove reference
+    controller = null
   })
