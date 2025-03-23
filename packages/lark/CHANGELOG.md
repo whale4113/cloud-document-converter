@@ -1,5 +1,16 @@
 # @dolphin/lark
 
+## 2.5.2
+
+### Patch Changes
+
+- [#48](https://github.com/whale4113/cloud-document-converter/pull/48) [`fe95c79`](https://github.com/whale4113/cloud-document-converter/commit/fe95c793f2d18a6c66edeca217e367470f7d7e90) Thanks [@whale4113](https://github.com/whale4113)! - feat: `offset` option support function format
+
+- [#48](https://github.com/whale4113/cloud-document-converter/pull/48) [`329c578`](https://github.com/whale4113/cloud-document-converter/commit/329c5782495519e583f417a4e5670253ffa86599) Thanks [@whale4113](https://github.com/whale4113)! - fix: `keepAlive` option is for `Toast.loading()`
+
+- Updated dependencies [[`f053228`](https://github.com/whale4113/cloud-document-converter/commit/f053228ec2e1c55233d67f42da82c90727d8de33)]:
+  - @dolphin/common@2.3.1
+
 ## 2.5.1
 
 ### Patch Changes
