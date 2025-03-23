@@ -8,6 +8,16 @@ export const waitForSelector = async (
      */
     timeout?: number
   } = {},
+) => waitForFunction(() => document.querySelector(selector) !== null, options)
+
+export const waitForFunction = async (
+  func: () => boolean,
+  options: {
+    /**
+     * @default 400
+     */
+    timeout?: number
+  } = {},
 ) => {
   const { timeout = 0.4 * Second } = options
 
@@ -17,7 +27,7 @@ export const waitForSelector = async (
 
   const isTimeout = () => timeoutId === null
 
-  while (!document.querySelector(selector) && !isTimeout()) {
+  while (!func() && !isTimeout()) {
     await waitFor(0.1 * Second)
   }
 
@@ -26,6 +36,6 @@ export const waitForSelector = async (
   }
 
   if (isTimeout()) {
-    throw new Error(`Timeout waiting for selector: ${selector}`)
+    throw new Error(`Timeout waiting for function: ${func.name}`)
   }
 }
