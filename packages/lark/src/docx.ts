@@ -4,7 +4,7 @@ import {
   imageDataToBlob,
   compare,
   isDefined,
-  waitForSelector,
+  waitForFunction,
   OneHundred,
   Second,
 } from '@dolphin/common'
@@ -82,6 +82,7 @@ export enum BlockType {
   VIEW = 'view',
   SYNCED_SOURCE = 'synced_source',
   WHITEBOARD = 'whiteboard',
+  FALLBACK = 'fallback',
 }
 
 interface Attributes {
@@ -315,6 +316,7 @@ interface NotSupportedBlock extends Block {
     | BlockType.ISV
     | BlockType.MINDNOTE
     | BlockType.SHEET
+    | BlockType.FALLBACK
   children: []
 }
 
@@ -729,6 +731,17 @@ type Mutate<T extends Block> = T extends PageBlock
                         : T extends IframeBlock
                           ? mdast.Html
                           : null
+interface ScrollToBlock {
+  (
+    blockId: number,
+    options?: {
+      /**
+       * @default 0
+       */
+      offset?: number
+    },
+  ): void
+}
 
 interface TransformerOptions {
   /**
@@ -744,7 +757,7 @@ interface TransformerOptions {
   /**
    * Scroll document to specific block.
    */
-  scrollTo?: (blockId: number) => void
+  scrollToBlock?: ScrollToBlock
 }
 
 interface TransformResult<T> {
@@ -988,15 +1001,30 @@ export class Transformer {
             data: {
               fetchBlob: async () => {
                 try {
-                  this.options.scrollTo?.(whiteboard.id)
+                  this.options.scrollToBlock?.(whiteboard.id)
                 } catch (error) {
                   console.error(error)
                 }
 
+                const delta = OneHundred / 2
+                let offset = 0
                 try {
-                  await waitForSelector(`[data-block-id="${block.id}"]`, {
-                    timeout: Second,
-                  })
+                  await waitForFunction(
+                    () => {
+                      const exists = whiteboard.whiteboardBlock !== undefined
+
+                      if (!exists) {
+                        this.options.scrollToBlock?.(whiteboard.id, {
+                          offset: (offset += delta),
+                        })
+                      }
+
+                      return exists
+                    },
+                    {
+                      timeout: 10 * Second,
+                    },
+                  )
                 } catch (error) {
                   console.error(error)
                 }
@@ -1114,8 +1142,7 @@ export class Transformer {
 }
 
 export class Docx {
-  private blockIdToScrollTop: Map<number, number> = new Map()
-  private scrollTop: number = 0
+  private blockIdToScrollTop: Map<string, number> = new Map()
 
   static stringify(root: mdast.Root) {
     return toMarkdown(root, {
@@ -1169,11 +1196,15 @@ export class Docx {
       this.rootBlock.children.every(block => {
         const prerequisite = block.snapshot.type !== 'pending'
 
-        if (block.type === BlockType.WHITEBOARD && checkWhiteboard) {
+        const isWhiteboard = (block: Blocks): block is Whiteboard =>
+          block.type === BlockType.WHITEBOARD ||
+          (block.type === BlockType.FALLBACK &&
+            block.snapshot.type === BlockType.WHITEBOARD)
+
+        if (checkWhiteboard && isWhiteboard(block)) {
           return (
             prerequisite &&
-            block.whiteboardBlock !== undefined &&
-            this.blockIdToScrollTop.get(block.id) !== undefined
+            this.blockIdToScrollTop.get(String(block.id)) !== undefined
           )
         }
 
@@ -1182,43 +1213,58 @@ export class Docx {
     )
   }
 
-  recordScrollTop() {
-    this.scrollTop = this.container?.scrollTop ?? 0
-  }
+  observeScrollTopOfBlock() {
+    let observer: null | MutationObserver = new MutationObserver(mutations => {
+      const container = this.container
+      if (!container) {
+        return
+      }
 
-  recoverScrollTop() {
-    this.scrollTo({
-      top: this.scrollTop,
+      for (const mutation of mutations) {
+        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+          for (const node of mutation.addedNodes) {
+            if (node instanceof Element) {
+              if (
+                node.getAttribute('data-block-type') === BlockType.WHITEBOARD
+              ) {
+                const id = node.getAttribute('data-block-id')
+                if (id) {
+                  this.blockIdToScrollTop.set(id, container.scrollTop)
+                }
+              }
+            }
+          }
+        }
+      }
     })
+
+    const wrapperSelector =
+      '.zone-container > .page-block-children .render-unit-wrapper'
+    const wrapper = this.container?.querySelector(wrapperSelector)
+
+    if (wrapper) {
+      observer?.observe(wrapper, {
+        childList: true,
+      })
+    }
+
+    return {
+      disconnect: () => {
+        observer?.disconnect()
+
+        observer = null
+      },
+    }
   }
 
-  scrollTo(
-    options: ScrollToOptions & {
-      /**
-       * @default false
-       */
-      cacheScrollTop?: boolean
-    } = {},
-  ) {
+  scrollTo(options: ScrollToOptions) {
     const container = this.container
     if (container) {
       const {
         left,
         top = container.scrollHeight,
         behavior = 'smooth',
-        cacheScrollTop = false,
       } = options
-
-      if (cacheScrollTop) {
-        this.rootBlock?.children.forEach(block => {
-          if (block.type === BlockType.WHITEBOARD) {
-            const el = document.querySelector(`[data-block-id="${block.id}"]`)
-            if (el) {
-              this.blockIdToScrollTop.set(block.id, container.scrollTop)
-            }
-          }
-        })
-      }
 
       container.scrollTo({
         left,
@@ -1235,19 +1281,25 @@ export class Docx {
       return { root: { type: 'root', children: [] }, images: [], files: [] }
     }
 
-    const defaultScrollTo = (blockId: number): void => {
-      const cacheScrollTop = this.blockIdToScrollTop.get(blockId)
+    const scrollToBlock: ScrollToBlock = (
+      blockId: number,
+      options = {},
+    ): void => {
+      const { offset = 0 } = options
+
+      const cacheScrollTop = this.blockIdToScrollTop.get(String(blockId))
       if (cacheScrollTop === undefined) {
         throw new Error(`Block ${blockId} no cache scroll top.`)
       }
 
       this.scrollTo({
-        top: cacheScrollTop,
+        top: cacheScrollTop + offset,
+        behavior: 'instant',
       })
     }
 
     const transformer = new Transformer({
-      scrollTo: defaultScrollTo,
+      scrollToBlock,
       ...transformerOptions,
     })
 
