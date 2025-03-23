@@ -1,12 +1,12 @@
 const noop = () => {}
 
 interface ToastOptions {
-  content: string
   key?: string
-  keepAlive?: boolean
-  closable?: boolean
+  content: string
   actionText?: string
   duration?: number
+  keepAlive?: boolean
+  closable?: boolean
   onActionClick?: () => void
   onClose?: () => void
 }

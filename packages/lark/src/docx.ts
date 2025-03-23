@@ -738,7 +738,9 @@ interface ScrollToBlock {
       /**
        * @default 0
        */
-      offset?: number
+      offset?:
+        | number
+        | ((options: { container: HTMLDivElement | null }) => number)
     },
   ): void
 }
@@ -1006,7 +1008,6 @@ export class Transformer {
                   console.error(error)
                 }
 
-                const delta = OneHundred / 2
                 let offset = 0
                 try {
                   await waitForFunction(
@@ -1015,7 +1016,8 @@ export class Transformer {
 
                       if (!exists) {
                         this.options.scrollToBlock?.(whiteboard.id, {
-                          offset: (offset += delta),
+                          offset: ({ container }) =>
+                            (offset += container?.clientHeight ?? OneHundred),
                         })
                       }
 
@@ -1176,7 +1178,9 @@ export class Docx {
   }
 
   get container() {
-    const container = document.querySelector('#mainBox .bear-web-x-container')
+    const container = document.querySelector<HTMLDivElement>(
+      '#mainBox .bear-web-x-container',
+    )
 
     return container
   }
@@ -1239,7 +1243,7 @@ export class Docx {
     })
 
     const wrapperSelector =
-      '.zone-container > .page-block-children .render-unit-wrapper'
+      '.zone-container > .page-block-children > .root-render-unit-container > .render-unit-wrapper'
     const wrapper = this.container?.querySelector(wrapperSelector)
 
     if (wrapper) {
@@ -1285,15 +1289,19 @@ export class Docx {
       blockId: number,
       options = {},
     ): void => {
-      const { offset = 0 } = options
-
       const cacheScrollTop = this.blockIdToScrollTop.get(String(blockId))
       if (cacheScrollTop === undefined) {
         throw new Error(`Block ${blockId} no cache scroll top.`)
       }
 
+      const { offset = 0 } = options
+      const normalizedOffset =
+        typeof offset === 'number'
+          ? offset
+          : offset({ container: this.container })
+
       this.scrollTo({
-        top: cacheScrollTop + offset,
+        top: cacheScrollTop + normalizedOffset,
         behavior: 'instant',
       })
     }

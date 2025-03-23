@@ -1,6 +1,6 @@
 import i18next from 'i18next'
 import { Toast, Docx, docx, mdast } from '@dolphin/lark'
-import { OneHundred, Second, waitFor } from '@dolphin/common'
+import { Minute, OneHundred, Second, waitFor } from '@dolphin/common'
 import { fileSave, supported } from 'browser-fs-access'
 import { fs } from '@zip.js/zip.js'
 import normalizeFileName from 'filenamify/browser'
@@ -448,9 +448,34 @@ const prepare = async (): Promise<PrepareResult> => {
       })
     }
 
+    enum Direction {
+      Up,
+      Down,
+    }
+    let direction = Direction.Down
+    const calculateDirection = () => {
+      const scrollHeight = docx.container?.scrollHeight ?? 0
+      const clientHeight = docx.container?.clientHeight ?? 0
+
+      if (
+        direction === Direction.Down &&
+        top > scrollHeight + 2 * clientHeight
+      ) {
+        return Direction.Up
+      }
+
+      if (direction === Direction.Up && top < 0) {
+        return Direction.Down
+      }
+
+      return direction
+    }
+
     let top = 0
+
     docx.scrollTo({
       top,
+      behavior: 'instant',
     })
 
     const maxTryTimes = OneHundred
@@ -471,12 +496,20 @@ const prepare = async (): Promise<PrepareResult> => {
     while (!checkIsReady() && tryTimes <= maxTryTimes) {
       docx.scrollTo({
         top,
+        behavior: 'smooth',
       })
 
       await waitFor(0.4 * Second)
 
+      direction = calculateDirection()
+
       tryTimes++
-      top += (docx.container?.clientHeight ?? 4 * OneHundred) * 2
+
+      const sign = direction === Direction.Down ? 1 : -1
+      const containerClientHeight =
+        docx.container?.clientHeight ?? 4 * OneHundred
+
+      top += sign * containerClientHeight
     }
 
     Toast.remove(TranslationKey.SCROLL_DOCUMENT)
@@ -641,7 +674,7 @@ main({
         actionText: i18next.t(CommonTranslationKey.CONFIRM_REPORT_BUG, {
           ns: Namespace.COMMON,
         }),
-        duration: Number.POSITIVE_INFINITY,
+        duration: Minute,
         onActionClick: () => {
           reportBug(error)
 
