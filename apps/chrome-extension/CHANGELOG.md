@@ -1,5 +1,17 @@
 # @dolphin/chrome-extension
 
+## 1.9.4
+
+### Patch Changes
+
+- [#48](https://github.com/whale4113/cloud-document-converter/pull/48) [`be8407a`](https://github.com/whale4113/cloud-document-converter/commit/be8407a3b7f1c0c85b201d30fd789dfce789b189) Thanks [@whale4113](https://github.com/whale4113)! - feat: adjusting the scroll down threshold
+
+- [#48](https://github.com/whale4113/cloud-document-converter/pull/48) [`61c702f`](https://github.com/whale4113/cloud-document-converter/commit/61c702f4438c13a39064ae12a11fee54a7740bb5) Thanks [@whale4113](https://github.com/whale4113)! - fix: scroll up and down to fully load doc
+
+- Updated dependencies [[`fe95c79`](https://github.com/whale4113/cloud-document-converter/commit/fe95c793f2d18a6c66edeca217e367470f7d7e90), [`329c578`](https://github.com/whale4113/cloud-document-converter/commit/329c5782495519e583f417a4e5670253ffa86599), [`f053228`](https://github.com/whale4113/cloud-document-converter/commit/f053228ec2e1c55233d67f42da82c90727d8de33)]:
+  - @dolphin/lark@2.5.2
+  - @dolphin/common@2.3.1
+
 ## 1.9.3
 
 ### Patch Changes

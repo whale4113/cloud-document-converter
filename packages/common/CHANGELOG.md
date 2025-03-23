@@ -1,5 +1,11 @@
 # @dolphin/common
 
+## 2.3.1
+
+### Patch Changes
+
+- [#48](https://github.com/whale4113/cloud-document-converter/pull/48) [`f053228`](https://github.com/whale4113/cloud-document-converter/commit/f053228ec2e1c55233d67f42da82c90727d8de33) Thanks [@whale4113](https://github.com/whale4113)! - feat: add `Minute` const
+
 ## 2.3.0
 
 ### Minor Changes
