@@ -1,5 +1,15 @@
 # @dolphin/chrome-extension
 
+## 1.9.3
+
+### Patch Changes
+
+- [#46](https://github.com/whale4113/cloud-document-converter/pull/46) [`f26454b`](https://github.com/whale4113/cloud-document-converter/commit/f26454ba3fb9c3ae4fd27dd17b1f261072cc9542) Thanks [@whale4113](https://github.com/whale4113)! - fix: prompts that doc has not finished loading
+
+- Updated dependencies [[`2da3dd8`](https://github.com/whale4113/cloud-document-converter/commit/2da3dd84db3c48b00ad92fc29348dc617edfc24c), [`30b8082`](https://github.com/whale4113/cloud-document-converter/commit/30b8082634d96bbd03b32aa6e6e41371f8c6251b)]:
+  - @dolphin/lark@2.5.1
+  - @dolphin/common@2.3.0
+
 ## 1.9.2
 
 ### Patch Changes

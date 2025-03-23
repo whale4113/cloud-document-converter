@@ -1,5 +1,11 @@
 # @dolphin/common
 
+## 2.3.0
+
+### Minor Changes
+
+- [#46](https://github.com/whale4113/cloud-document-converter/pull/46) [`30b8082`](https://github.com/whale4113/cloud-document-converter/commit/30b8082634d96bbd03b32aa6e6e41371f8c6251b) Thanks [@whale4113](https://github.com/whale4113)! - feat: add `waitForFunction()` utilities
+
 ## 2.2.0
 
 ### Minor Changes
