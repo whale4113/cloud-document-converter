@@ -1,5 +1,14 @@
 # @dolphin/lark
 
+## 2.5.1
+
+### Patch Changes
+
+- [#46](https://github.com/whale4113/cloud-document-converter/pull/46) [`2da3dd8`](https://github.com/whale4113/cloud-document-converter/commit/2da3dd84db3c48b00ad92fc29348dc617edfc24c) Thanks [@whale4113](https://github.com/whale4113)! - fix: whiteboard is not loaded
+
+- Updated dependencies [[`30b8082`](https://github.com/whale4113/cloud-document-converter/commit/30b8082634d96bbd03b32aa6e6e41371f8c6251b)]:
+  - @dolphin/common@2.3.0
+
 ## 2.5.0
 
 ### Minor Changes
