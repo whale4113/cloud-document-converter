@@ -1239,7 +1239,7 @@ export class Docx {
     })
 
     const wrapperSelector =
-      '.zone-container > .page-block-children .render-unit-wrapper'
+      '.zone-container > .page-block-children > .root-render-unit-container > .render-unit-wrapper'
     const wrapper = this.container?.querySelector(wrapperSelector)
 
     if (wrapper) {

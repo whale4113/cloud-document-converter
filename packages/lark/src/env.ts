@@ -3,7 +3,6 @@ const noop = () => {}
 interface ToastOptions {
   content: string
   key?: string
-  keepAlive?: boolean
   closable?: boolean
   actionText?: string
   duration?: number
@@ -15,7 +14,7 @@ export interface Toast {
   error: (options: ToastOptions) => void
   warning: (options: ToastOptions) => void
   info: (options: ToastOptions) => void
-  loading: (options: ToastOptions) => void
+  loading: (options: ToastOptions & { keepAlive?: boolean }) => void
   success: (options: ToastOptions) => void
   remove: (key: string) => void
 }
