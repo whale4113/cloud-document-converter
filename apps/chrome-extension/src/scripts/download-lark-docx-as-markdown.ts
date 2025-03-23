@@ -440,8 +440,13 @@ const prepare = async (): Promise<PrepareResult> => {
   let recoverScrollTop
 
   if (!checkIsReady()) {
-    docx.recordScrollTop()
-    recoverScrollTop = () => docx.recoverScrollTop()
+    const initialScrollTop = docx.container?.scrollTop ?? 0
+    recoverScrollTop = () => {
+      docx.scrollTo({
+        top: initialScrollTop,
+        behavior: 'instant',
+      })
+    }
 
     let top = 0
     docx.scrollTo({
@@ -461,10 +466,11 @@ const prepare = async (): Promise<PrepareResult> => {
       },
     })
 
+    const { disconnect } = docx.observeScrollTopOfBlock()
+
     while (!checkIsReady() && tryTimes <= maxTryTimes) {
       docx.scrollTo({
         top,
-        cacheScrollTop: true,
       })
 
       await waitFor(0.4 * Second)
@@ -474,6 +480,8 @@ const prepare = async (): Promise<PrepareResult> => {
     }
 
     Toast.remove(TranslationKey.SCROLL_DOCUMENT)
+
+    disconnect()
   }
 
   return {
