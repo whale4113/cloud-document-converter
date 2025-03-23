@@ -455,8 +455,12 @@ const prepare = async (): Promise<PrepareResult> => {
     let direction = Direction.Down
     const calculateDirection = () => {
       const scrollHeight = docx.container?.scrollHeight ?? 0
+      const clientHeight = docx.container?.clientHeight ?? 0
 
-      if (direction === Direction.Down && top > scrollHeight) {
+      if (
+        direction === Direction.Down &&
+        top > scrollHeight + 2 * clientHeight
+      ) {
         return Direction.Up
       }
 
