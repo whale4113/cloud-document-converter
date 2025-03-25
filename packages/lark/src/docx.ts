@@ -731,19 +731,6 @@ type Mutate<T extends Block> = T extends PageBlock
                         : T extends IframeBlock
                           ? mdast.Html
                           : null
-interface ScrollToBlock {
-  (
-    blockId: number,
-    options?: {
-      /**
-       * @default 0
-       */
-      offset?:
-        | number
-        | ((options: { container: HTMLDivElement | null }) => number)
-    },
-  ): void
-}
 
 interface TransformerOptions {
   /**
@@ -757,9 +744,9 @@ interface TransformerOptions {
    */
   file?: boolean
   /**
-   * Scroll document to specific block.
+   * Locate block with record id.
    */
-  scrollToBlock?: ScrollToBlock
+  locateBlockWithRecordId?: (recordId: string) => Promise<boolean>
 }
 
 interface TransformResult<T> {
@@ -1003,28 +990,18 @@ export class Transformer {
             data: {
               fetchBlob: async () => {
                 try {
-                  this.options.scrollToBlock?.(whiteboard.id)
-                } catch (error) {
-                  console.error(error)
-                }
+                  const {
+                    locateBlockWithRecordId = () => Promise.resolve(false),
+                  } = this.options
 
-                let offset = 0
-                try {
                   await waitForFunction(
-                    () => {
-                      const exists = whiteboard.whiteboardBlock !== undefined
-
-                      if (!exists) {
-                        this.options.scrollToBlock?.(whiteboard.id, {
-                          offset: ({ container }) =>
-                            (offset += container?.clientHeight ?? OneHundred),
-                        })
-                      }
-
-                      return exists
-                    },
+                    () =>
+                      locateBlockWithRecordId(whiteboard.record?.id ?? '').then(
+                        isSuccess =>
+                          isSuccess && whiteboard.whiteboardBlock !== undefined,
+                      ),
                     {
-                      timeout: 10 * Second,
+                      timeout: 3 * Second,
                     },
                   )
                 } catch (error) {
@@ -1144,8 +1121,6 @@ export class Transformer {
 }
 
 export class Docx {
-  private blockIdToScrollTop: Map<string, number> = new Map()
-
   static stringify(root: mdast.Root) {
     return toMarkdown(root, {
       extensions: [
@@ -1200,65 +1175,18 @@ export class Docx {
       this.rootBlock.children.every(block => {
         const prerequisite = block.snapshot.type !== 'pending'
 
-        const isWhiteboard = (block: Blocks): block is Whiteboard =>
+        const isWhiteboard = (block: Blocks): boolean =>
           block.type === BlockType.WHITEBOARD ||
           (block.type === BlockType.FALLBACK &&
             block.snapshot.type === BlockType.WHITEBOARD)
 
         if (checkWhiteboard && isWhiteboard(block)) {
-          return (
-            prerequisite &&
-            this.blockIdToScrollTop.get(String(block.id)) !== undefined
-          )
+          return prerequisite && block.type !== BlockType.FALLBACK
         }
 
         return prerequisite
       })
     )
-  }
-
-  observeScrollTopOfBlock() {
-    let observer: null | MutationObserver = new MutationObserver(mutations => {
-      const container = this.container
-      if (!container) {
-        return
-      }
-
-      for (const mutation of mutations) {
-        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-          for (const node of mutation.addedNodes) {
-            if (node instanceof Element) {
-              if (
-                node.getAttribute('data-block-type') === BlockType.WHITEBOARD
-              ) {
-                const id = node.getAttribute('data-block-id')
-                if (id) {
-                  this.blockIdToScrollTop.set(id, container.scrollTop)
-                }
-              }
-            }
-          }
-        }
-      }
-    })
-
-    const wrapperSelector =
-      '.zone-container > .page-block-children > .root-render-unit-container > .render-unit-wrapper'
-    const wrapper = this.container?.querySelector(wrapperSelector)
-
-    if (wrapper) {
-      observer?.observe(wrapper, {
-        childList: true,
-      })
-    }
-
-    return {
-      disconnect: () => {
-        observer?.disconnect()
-
-        observer = null
-      },
-    }
   }
 
   scrollTo(options: ScrollToOptions) {
@@ -1285,29 +1213,24 @@ export class Docx {
       return { root: { type: 'root', children: [] }, images: [], files: [] }
     }
 
-    const scrollToBlock: ScrollToBlock = (
-      blockId: number,
-      options = {},
-    ): void => {
-      const cacheScrollTop = this.blockIdToScrollTop.get(String(blockId))
-      if (cacheScrollTop === undefined) {
-        throw new Error(`Block ${blockId} no cache scroll top.`)
+    const locateBlockWithRecordId = async (
+      recordId: string,
+    ): Promise<boolean> => {
+      try {
+        if (!PageMain) {
+          return false
+        }
+
+        return await PageMain.locateBlockWithRecordIdImpl(recordId)
+      } catch (error) {
+        console.error(error)
       }
 
-      const { offset = 0 } = options
-      const normalizedOffset =
-        typeof offset === 'number'
-          ? offset
-          : offset({ container: this.container })
-
-      this.scrollTo({
-        top: cacheScrollTop + normalizedOffset,
-        behavior: 'instant',
-      })
+      return false
     }
 
     const transformer = new Transformer({
-      scrollToBlock,
+      locateBlockWithRecordId,
       ...transformerOptions,
     })
 

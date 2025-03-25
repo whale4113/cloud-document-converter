@@ -47,6 +47,11 @@ export interface PageMain {
     }
     rootBlockModel: import('./docx').PageBlock
   }
+
+  locateBlockWithRecordIdImpl(
+    recordId: string,
+    options?: Record<string, unknown>,
+  ): Promise<boolean>
 }
 
 export const PageMain = window.PageMain
