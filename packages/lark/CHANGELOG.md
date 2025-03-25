@@ -1,5 +1,14 @@
 # @dolphin/lark
 
+## 2.5.3
+
+### Patch Changes
+
+- [#51](https://github.com/whale4113/cloud-document-converter/pull/51) [`16b1006`](https://github.com/whale4113/cloud-document-converter/commit/16b10062b0290b17f1e4069e6797d54dcc25a821) Thanks [@whale4113](https://github.com/whale4113)! - fix: use api to locate blocks
+
+- Updated dependencies [[`3adf4ff`](https://github.com/whale4113/cloud-document-converter/commit/3adf4ff0bfb001f3737b3fa73dc36949b70e8bcf)]:
+  - @dolphin/common@2.3.2
+
 ## 2.5.2
 
 ### Patch Changes
