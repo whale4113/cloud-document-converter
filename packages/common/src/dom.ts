@@ -11,7 +11,7 @@ export const waitForSelector = async (
 ) => waitForFunction(() => document.querySelector(selector) !== null, options)
 
 export const waitForFunction = async (
-  func: () => boolean,
+  func: () => boolean | Promise<boolean>,
   options: {
     /**
      * @default 400
@@ -27,7 +27,9 @@ export const waitForFunction = async (
 
   const isTimeout = () => timeoutId === null
 
-  while (!func() && !isTimeout()) {
+  const _func = () => Promise.resolve(func()).catch(() => false)
+
+  while (!(await _func()) && !isTimeout()) {
     await waitFor(0.1 * Second)
   }
 
