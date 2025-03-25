@@ -448,29 +448,6 @@ const prepare = async (): Promise<PrepareResult> => {
       })
     }
 
-    enum Direction {
-      Up,
-      Down,
-    }
-    let direction = Direction.Down
-    const calculateDirection = () => {
-      const scrollHeight = docx.container?.scrollHeight ?? 0
-      const clientHeight = docx.container?.clientHeight ?? 0
-
-      if (
-        direction === Direction.Down &&
-        top > scrollHeight + 2 * clientHeight
-      ) {
-        return Direction.Up
-      }
-
-      if (direction === Direction.Up && top < 0) {
-        return Direction.Down
-      }
-
-      return direction
-    }
-
     let top = 0
 
     docx.scrollTo({
@@ -491,8 +468,6 @@ const prepare = async (): Promise<PrepareResult> => {
       },
     })
 
-    const { disconnect } = docx.observeScrollTopOfBlock()
-
     while (!checkIsReady() && tryTimes <= maxTryTimes) {
       docx.scrollTo({
         top,
@@ -501,20 +476,12 @@ const prepare = async (): Promise<PrepareResult> => {
 
       await waitFor(0.4 * Second)
 
-      direction = calculateDirection()
-
       tryTimes++
 
-      const sign = direction === Direction.Down ? 1 : -1
-      const containerClientHeight =
-        docx.container?.clientHeight ?? 4 * OneHundred
-
-      top += sign * containerClientHeight
+      top = docx.container?.scrollHeight ?? 0
     }
 
     Toast.remove(TranslationKey.SCROLL_DOCUMENT)
-
-    disconnect()
   }
 
   return {
