@@ -1,5 +1,11 @@
 # @dolphin/lark
 
+## 2.5.4
+
+### Patch Changes
+
+- [#53](https://github.com/whale4113/cloud-document-converter/pull/53) [`8051342`](https://github.com/whale4113/cloud-document-converter/commit/8051342718e2a5fff508866999892d727f6cb3a1) Thanks [@whale4113](https://github.com/whale4113)! - fix: gif image download failed
+
 ## 2.5.3
 
 ### Patch Changes
