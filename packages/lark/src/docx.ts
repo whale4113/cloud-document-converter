@@ -224,7 +224,7 @@ interface ImageBlock extends Block {
   }
   imageManager: {
     fetch: <T extends ImageSources>(
-      image: { token: string },
+      image: { token: string; isHD: boolean },
       options: unknown,
       callback: (sources: ImageSources) => T,
     ) => Promise<T>
@@ -675,7 +675,7 @@ const fetchImageSources = (imageBlock: ImageBlock) => {
     },
   } = imageBlock
 
-  return imageManager.fetch({ token }, {}, sources => sources)
+  return imageManager.fetch({ token, isHD: true }, {}, sources => sources)
 }
 
 const whiteboardToImageData = async (
