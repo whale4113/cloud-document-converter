@@ -1,3 +1,6 @@
+import { injectReferencesButton } from './all_links_content';
+import { injectDownloadButton } from './download_content';
+
 const COMMENT_BUTTON_CLASS = '.docx-comment__first-comment-btn'
 const HELP_BLOCK_CLASS = '.help-block'
 
@@ -287,3 +290,15 @@ const urlChangeObserver = new MutationObserver(() => {
   }
 })
 urlChangeObserver.observe(document.body, { childList: true })
+
+const main = async () => {
+  // ... 现有的代码 ...
+
+  // 注入下载按钮
+  injectDownloadButton();
+  injectReferencesButton(); // 添加引用列表按钮
+  
+  // ... 现有的代码 ...
+};
+
+main();

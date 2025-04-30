@@ -3,6 +3,7 @@ import { Flag, Message } from './common/message'
 enum MenuItemId {
   DOWNLOAD_DOCX_AS_MARKDOWN = 'download_docx_as_markdown',
   COPY_DOCX_AS_MARKDOWN = 'copy_docx_as_markdown',
+  PARSE_DOCX_REFERENCES = 'parse_docx_references', // 新增
 }
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -36,6 +37,7 @@ chrome.runtime.onInstalled.addListener(() => {
 const executeScriptByFlag = async (flag: string | number, tabId: number) => {
   switch (flag) {
     case MenuItemId.DOWNLOAD_DOCX_AS_MARKDOWN:
+      console.log("cmdbg download_docx_as_markdown")
       await chrome.scripting.executeScript({
         files: ['bundles/scripts/download-lark-docx-as-markdown.js'],
         target: { tabId },
@@ -45,6 +47,14 @@ const executeScriptByFlag = async (flag: string | number, tabId: number) => {
     case MenuItemId.COPY_DOCX_AS_MARKDOWN:
       await chrome.scripting.executeScript({
         files: ['bundles/scripts/copy-lark-docx-as-markdown.js'],
+        target: { tabId },
+        world: 'MAIN',
+      })
+      break
+    case MenuItemId.PARSE_DOCX_REFERENCES: // 新增
+      console.log('cmdbg parse_docx_references')
+      await chrome.scripting.executeScript({
+        files: ['bundles/scripts/parse-lark-docx-references.js'],
         target: { tabId },
         world: 'MAIN',
       })
@@ -65,7 +75,7 @@ chrome.runtime.onMessage.addListener((_message, sender, sendResponse) => {
 
   if (
     message.flag === Flag.ExecuteCopyScript ||
-    message.flag === Flag.ExecuteDownloadScript
+    message.flag === Flag.ExecuteDownloadScript || message.flag === 'parse_docx_references' 
   ) {
     const executeScript = async () => {
       const activeTabs = await chrome.tabs.query({
