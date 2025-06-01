@@ -1,4 +1,4 @@
-import * as mdast from 'mdast'
+import type * as mdast from 'mdast'
 import chunk from 'lodash-es/chunk'
 import {
   imageDataToBlob,
@@ -12,7 +12,7 @@ import { toMarkdown } from 'mdast-util-to-markdown'
 import { gfmStrikethroughToMarkdown } from 'mdast-util-gfm-strikethrough'
 import { gfmTaskListItemToMarkdown } from 'mdast-util-gfm-task-list-item'
 import { gfmTableToMarkdown } from 'mdast-util-gfm-table'
-import { mathToMarkdown, InlineMath } from 'mdast-util-math'
+import { mathToMarkdown, type InlineMath } from 'mdast-util-math'
 import { PageMain, User } from './env'
 import {
   isBlockquoteContent,
@@ -156,8 +156,8 @@ interface HeadingBlock extends Block<TextBlock> {
     /**
      * sequence value
      */
-    seq?: string | 'auto'
-    seq_level?: string | 'auto'
+    seq?: string
+    seq_level?: string
   }
 }
 
@@ -364,7 +364,7 @@ const iframeToHTML = (iframe: IframeBlock): mdast.Html | null => {
     return null
   }
 
-  const html = `<iframe src="${url}" sandbox="allow-scripts allow-same-origin allow-presentation allow-forms allow-popups allow-downloads" allowfullscreen allow="encrypted-media; fullscreen; autoplay" referrerpolicy="strict-origin-when-cross-origin" frameborder="0" style="width: 100%; min-height: ${height}px; border-radius: 8px;"></iframe>`
+  const html = `<iframe src="${url}" sandbox="allow-scripts allow-same-origin allow-presentation allow-forms allow-popups allow-downloads" allowfullscreen allow="encrypted-media; fullscreen; autoplay" referrerpolicy="strict-origin-when-cross-origin" frameborder="0" style="width: 100%; min-height: ${height.toFixed()}px; border-radius: 8px;"></iframe>`
 
   return {
     type: 'html',
@@ -376,9 +376,7 @@ const iframeToHTML = (iframe: IframeBlock): mdast.Html | null => {
  * @description Removes an enter from the end of this string if it exists.
  */
 const trimEndEnter = (input: string) =>
-  input.length > 0 && input[input.length - 1] === '\n'
-    ? input.slice(0, -1)
-    : input
+  input.length > 0 && input.endsWith('\n') ? input.slice(0, -1) : input
 
 const chunkBy = <T>(
   items: T[],
@@ -404,7 +402,9 @@ const chunkBy = <T>(
   return chunks
 }
 
-export const mergeListItems = <T extends mdast.Nodes>(nodes: T[]) =>
+export const mergeListItems = <T extends mdast.Nodes>(
+  nodes: T[],
+): (mdast.List | T)[] =>
   chunkBy(nodes, (current, next) => {
     const listItemType = (listItem: mdast.ListItem) => {
       if (typeof listItem.checked === 'boolean') {
@@ -475,7 +475,9 @@ export const mergeListItems = <T extends mdast.Nodes>(nodes: T[]) =>
     return node
   })
 
-export const mergePhrasingContents = (nodes: mdast.PhrasingContent[]) =>
+export const mergePhrasingContents = (
+  nodes: mdast.PhrasingContent[],
+): mdast.PhrasingContent[] =>
   chunkBy(nodes, (current, next) => {
     if (current.type === 'link' && next.type === 'link') {
       return current.url === next.url
@@ -541,7 +543,15 @@ export const transformOperationsToPhrasingContents = (
     .map(op => {
       if (isDefined(op.attributes) && op.attributes['inline-component']) {
         try {
-          const inlineComponent = JSON.parse(op.attributes['inline-component'])
+          const inlineComponent = JSON.parse(
+            op.attributes['inline-component'],
+          ) as {
+            type: string
+            data: {
+              raw_url: string
+              title: string
+            }
+          }
           if (inlineComponent.type === 'mention_doc') {
             return {
               attributes: {
@@ -1121,7 +1131,7 @@ export class Transformer {
 }
 
 export class Docx {
-  static stringify(root: mdast.Root) {
+  static stringify(root: mdast.Root): string {
     return toMarkdown(root, {
       extensions: [
         gfmStrikethroughToMarkdown(),
@@ -1134,7 +1144,7 @@ export class Docx {
     })
   }
 
-  get rootBlock() {
+  get rootBlock(): PageBlock | null {
     if (!PageMain) {
       return null
     }
@@ -1142,17 +1152,17 @@ export class Docx {
     return PageMain.blockManager.rootBlockModel
   }
 
-  get language() {
+  get language(): 'zh' | 'en' {
     return User?.language === 'zh' ? 'zh' : 'en'
   }
 
-  get pageTitle() {
-    if (!this.rootBlock || !this.rootBlock.zoneState) return null
+  get pageTitle(): string | undefined {
+    if (!this.rootBlock?.zoneState) return undefined
 
     return trimEndEnter(this.rootBlock.zoneState.allText)
   }
 
-  get container() {
+  get container(): HTMLDivElement | null {
     const container = document.querySelector<HTMLDivElement>(
       '#mainBox .bear-web-x-container',
     )
@@ -1167,7 +1177,7 @@ export class Docx {
        */
       checkWhiteboard?: boolean
     } = {},
-  ) {
+  ): boolean {
     const { checkWhiteboard = false } = options
 
     return (
@@ -1189,7 +1199,7 @@ export class Docx {
     )
   }
 
-  scrollTo(options: ScrollToOptions) {
+  scrollTo(options: ScrollToOptions): void {
     const container = this.container
     if (container) {
       const {
@@ -1238,4 +1248,4 @@ export class Docx {
   }
 }
 
-export const docx = new Docx()
+export const docx: Docx = new Docx()

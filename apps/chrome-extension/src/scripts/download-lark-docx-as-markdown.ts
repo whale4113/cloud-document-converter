@@ -1,5 +1,5 @@
 import i18next from 'i18next'
-import { Toast, Docx, docx, mdast } from '@dolphin/lark'
+import { Toast, Docx, docx, type mdast } from '@dolphin/lark'
 import { Minute, OneHundred, Second, waitFor } from '@dolphin/common'
 import { fileSave, supported } from 'browser-fs-access'
 import { fs } from '@zip.js/zip.js'
@@ -33,56 +33,58 @@ enum ToastKey {
   REPORT_BUG = 'report_bug',
 }
 
-i18next.init({
-  lng: docx.language,
-  resources: {
-    en: {
-      translation: {
-        [TranslationKey.CONTENT_LOADING]:
-          'Part of the content is still loading and cannot be downloaded at the moment. Please wait for loading to complete and retry',
-        [TranslationKey.UNKNOWN_ERROR]: 'Unknown error during download',
-        [TranslationKey.NOT_SUPPORT]:
-          'This is not a lark document page and cannot be downloaded as Markdown',
-        [TranslationKey.DOWNLOADING_FILE]:
-          'Download {{name}} in: {{progress}}% (please do not refresh or close the page)',
-        [TranslationKey.FAILED_TO_DOWNLOAD]: 'Failed to download {{name}}',
-        [TranslationKey.STILL_SAVING]:
-          'Still saving (please do not refresh or close the page)',
-        [TranslationKey.DOWNLOAD_PROGRESS]:
-          '{{name}} download progress: {{progress}} %',
-        [TranslationKey.DOWNLOAD_COMPLETE]: 'Download complete',
-        [TranslationKey.IMAGE]: 'Image',
-        [TranslationKey.FILE]: 'File',
-        [TranslationKey.CANCEL]: 'Cancel',
-        [TranslationKey.SCROLL_DOCUMENT]: 'Scrolling to load document',
+i18next
+  .init({
+    lng: docx.language,
+    resources: {
+      en: {
+        translation: {
+          [TranslationKey.CONTENT_LOADING]:
+            'Part of the content is still loading and cannot be downloaded at the moment. Please wait for loading to complete and retry',
+          [TranslationKey.UNKNOWN_ERROR]: 'Unknown error during download',
+          [TranslationKey.NOT_SUPPORT]:
+            'This is not a lark document page and cannot be downloaded as Markdown',
+          [TranslationKey.DOWNLOADING_FILE]:
+            'Download {{name}} in: {{progress}}% (please do not refresh or close the page)',
+          [TranslationKey.FAILED_TO_DOWNLOAD]: 'Failed to download {{name}}',
+          [TranslationKey.STILL_SAVING]:
+            'Still saving (please do not refresh or close the page)',
+          [TranslationKey.DOWNLOAD_PROGRESS]:
+            '{{name}} download progress: {{progress}} %',
+          [TranslationKey.DOWNLOAD_COMPLETE]: 'Download complete',
+          [TranslationKey.IMAGE]: 'Image',
+          [TranslationKey.FILE]: 'File',
+          [TranslationKey.CANCEL]: 'Cancel',
+          [TranslationKey.SCROLL_DOCUMENT]: 'Scrolling to load document',
+        },
+        ...en,
       },
-      ...en,
-    },
-    zh: {
-      translation: {
-        [TranslationKey.CONTENT_LOADING]:
-          '部分内容仍在加载中，暂时无法下载。请等待加载完成后重试',
-        [TranslationKey.UNKNOWN_ERROR]: '下载过程中出现未知错误',
-        [TranslationKey.NOT_SUPPORT]:
-          '这不是一个飞书文档页面，无法下载为 Markdown',
-        [TranslationKey.DOWNLOADING_FILE]:
-          '下载 {{name}} 中：{{progress}}%（请不要刷新或关闭页面）',
-        [TranslationKey.FAILED_TO_DOWNLOAD]: '下载 {{name}} 失败',
-        [TranslationKey.STILL_SAVING]: '仍在保存中（请不要刷新或关闭页面）',
-        [TranslationKey.DOWNLOAD_PROGRESS]: '{{name}}下载进度：{{progress}}%',
-        [TranslationKey.DOWNLOAD_COMPLETE]: '下载完成',
-        [TranslationKey.IMAGE]: '图片',
-        [TranslationKey.FILE]: '文件',
-        [TranslationKey.CANCEL]: '取消',
-        [TranslationKey.SCROLL_DOCUMENT]: '滚动中，以便加载文档',
+      zh: {
+        translation: {
+          [TranslationKey.CONTENT_LOADING]:
+            '部分内容仍在加载中，暂时无法下载。请等待加载完成后重试',
+          [TranslationKey.UNKNOWN_ERROR]: '下载过程中出现未知错误',
+          [TranslationKey.NOT_SUPPORT]:
+            '这不是一个飞书文档页面，无法下载为 Markdown',
+          [TranslationKey.DOWNLOADING_FILE]:
+            '下载 {{name}} 中：{{progress}}%（请不要刷新或关闭页面）',
+          [TranslationKey.FAILED_TO_DOWNLOAD]: '下载 {{name}} 失败',
+          [TranslationKey.STILL_SAVING]: '仍在保存中（请不要刷新或关闭页面）',
+          [TranslationKey.DOWNLOAD_PROGRESS]: '{{name}}下载进度：{{progress}}%',
+          [TranslationKey.DOWNLOAD_COMPLETE]: '下载完成',
+          [TranslationKey.IMAGE]: '图片',
+          [TranslationKey.FILE]: '文件',
+          [TranslationKey.CANCEL]: '取消',
+          [TranslationKey.SCROLL_DOCUMENT]: '滚动中，以便加载文档',
+        },
+        ...zh,
       },
-      ...zh,
     },
-  },
-})
+  })
+  .catch(console.error)
 
-const usedNames: Set<string> = new Set()
-const fileNameToPreId: Map<string, number> = new Map()
+const usedNames = new Set<string>()
+const fileNameToPreId = new Map<string, number>()
 const uniqueFileName = (originFileName: string) => {
   if (usedNames.has(originFileName)) {
     const startDotIndex = originFileName.lastIndexOf('.')
@@ -93,10 +95,10 @@ const uniqueFileName = (originFileName: string) => {
 
     const fileName =
       startDotIndex === -1
-        ? originFileName.concat(`-${id}`)
+        ? originFileName.concat(`-${id.toFixed()}`)
         : originFileName
             .slice(0, startDotIndex)
-            .concat(`-${id}`)
+            .concat(`-${id.toFixed()}`)
             .concat(originFileName.slice(startDotIndex))
 
     return fileName
@@ -117,7 +119,7 @@ async function toBlob(
   options: ProgressOptions = {},
 ): Promise<Blob> {
   if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`)
+    throw new Error(`HTTP error! status: ${response.status.toFixed()}`)
   }
 
   if (!response.body) {
@@ -171,11 +173,11 @@ const downloadImage = async (
   const { name: originName, fetchSources, fetchBlob } = image.data
 
   const result = await withSignal(
-    async aborted => {
+    async isAborted => {
       try {
         // whiteboard
         if (fetchBlob) {
-          if (aborted.current) {
+          if (isAborted()) {
             return null
           }
 
@@ -195,7 +197,7 @@ const downloadImage = async (
 
         // image
         if (originName && fetchSources) {
-          if (aborted.current) {
+          if (isAborted()) {
             return null
           }
           const sources = await fetchSources()
@@ -204,20 +206,21 @@ const downloadImage = async (
           const name = uniqueFileName(originName)
           const filename = `images/${name}`
 
-          if (aborted.current) {
+          const { src } = sources
+          if (isAborted()) {
             return null
           }
-          const { src } = sources
           const response = await fetch(src, {
             signal,
           })
+
           try {
-            if (aborted.current) {
+            if (isAborted()) {
               return null
             }
             const blob = await toBlob(response, {
               onProgress: progress => {
-                if (aborted.current) {
+                if (isAborted()) {
                   Toast.remove(filename)
 
                   return
@@ -247,10 +250,11 @@ const downloadImage = async (
 
         return null
       } catch (error) {
-        const isAborted =
-          aborted.current ||
+        const isAbortError =
+          isAborted() ||
           (error instanceof DOMException && error.name === 'AbortError')
-        if (!isAborted) {
+
+        if (!isAbortError) {
           Toast.error({
             content: i18next.t(TranslationKey.FAILED_TO_DOWNLOAD, {
               name: originName,
@@ -279,7 +283,7 @@ const downloadFile = async (
     signal?: AbortSignal
   } = {},
 ): Promise<DownloadResult | null> => {
-  if (!file.data || !file.data.name || !file.data.fetchFile) return null
+  if (!file.data?.name || !file.data.fetchFile) return null
 
   const { signal } = options
 
@@ -379,20 +383,20 @@ const downloadFiles = async (
   }
 
   const results = await withSignal(
-    async aborted => {
+    async isAborted => {
       const _results: DownloadResult[] = []
 
       const totalSize = files.length
       let downloadedSize = 0
 
       for (const batch of cluster(files, batchSize)) {
-        if (aborted.current) {
+        if (isAborted()) {
           break
         }
 
         await Promise.allSettled(
           batch.map(async file => {
-            if (aborted.current) {
+            if (isAborted()) {
               return
             }
 
@@ -408,7 +412,7 @@ const downloadFiles = async (
             } finally {
               downloadedSize++
 
-              if (!aborted.current) {
+              if (!isAborted()) {
                 onProgress?.(downloadedSize / totalSize)
               }
             }
@@ -628,9 +632,10 @@ main({
       content: i18next.t(TranslationKey.DOWNLOAD_COMPLETE),
     })
   })
-  .catch((error: DOMException | TypeError | Error) => {
+  .catch((error: unknown) => {
     const aborted =
-      error.name === 'AbortError' || error.message === DOWNLOAD_ABORTED
+      error instanceof Error &&
+      (error.name === 'AbortError' || error.message === DOWNLOAD_ABORTED)
 
     if (aborted) {
       controller.abort()

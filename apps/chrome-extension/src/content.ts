@@ -3,8 +3,10 @@ const HELP_BLOCK_CLASS = '.help-block'
 
 let disposables: (() => void)[] = []
 
-const dispose = () => {
-  disposables.forEach(disposable => disposable())
+const dispose = (): void => {
+  disposables.forEach(disposable => {
+    disposable()
+  })
 
   disposables = []
 }
@@ -15,7 +17,7 @@ interface Button {
   height: number
 }
 
-const initButtons = () => {
+const initButtons = (): void => {
   const root = document.body
 
   const isReady = () => {
@@ -64,7 +66,9 @@ const initButtons = () => {
           </path>
           </svg>`,
         action: () => {
-          chrome.runtime.sendMessage({ flag: 'copy_docx_as_markdown' })
+          chrome.runtime
+            .sendMessage({ flag: 'copy_docx_as_markdown' })
+            .catch(console.error)
         },
       },
       {
@@ -79,7 +83,9 @@ const initButtons = () => {
         </path>
       </svg>`,
         action: () => {
-          chrome.runtime.sendMessage({ flag: 'download_docx_as_markdown' })
+          chrome.runtime
+            .sendMessage({ flag: 'download_docx_as_markdown' })
+            .catch(console.error)
         },
       },
     ]
@@ -164,6 +170,8 @@ const initButtons = () => {
           { right: windowWidth - helpBlockRect.right, bottom: 90 },
         ]
       }
+
+      return
     }
 
     const layout = (buttons: Button[]) => {
@@ -171,8 +179,8 @@ const initButtons = () => {
       if (!pos) return
 
       buttons.forEach((button, index) => {
-        button.element.style.right = pos[index].right + 'px'
-        button.element.style.bottom = pos[index].bottom + 'px'
+        button.element.style.right = pos[index].right.toFixed() + 'px'
+        button.element.style.bottom = pos[index].bottom.toFixed() + 'px'
       })
     }
 
@@ -255,7 +263,9 @@ const initButtons = () => {
     }
   })
 
-  isReady() && init()
+  if (isReady()) {
+    init()
+  }
 
   initObserver.observe(root, {
     childList: true,
@@ -267,7 +277,7 @@ const initButtons = () => {
   })
 }
 
-function initContent() {
+function initContent(): void {
   initButtons()
 }
 
@@ -275,7 +285,7 @@ window.addEventListener('load', initContent, false)
 
 // For SPA, some page content updates do not trigger page reloads
 let lastPathname: string = location.pathname
-const urlChangeObserver = new MutationObserver(() => {
+const urlChangeObserver: MutationObserver = new MutationObserver(() => {
   const pathname = location.pathname
 
   if (pathname !== lastPathname) {

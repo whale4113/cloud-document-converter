@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/no-empty-function
 const noop = () => {}
 
 interface ToastOptions {
@@ -29,13 +30,13 @@ const defaultToast: Toast = {
   remove: noop,
 }
 
-export const Toast = window.Toast ?? defaultToast
+export const Toast: Toast = window.Toast ?? defaultToast
 
 export interface User {
   language: string
 }
 
-export const User = window.User
+export const User: User | undefined = window.User
 
 export interface PageMain {
   blockManager: {
@@ -54,4 +55,4 @@ export interface PageMain {
   ): Promise<boolean>
 }
 
-export const PageMain = window.PageMain
+export const PageMain: PageMain | undefined = window.PageMain

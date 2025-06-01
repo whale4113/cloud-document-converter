@@ -8,9 +8,11 @@ const readJson = (relativePath: string): { version: string } | null => {
   try {
     const filePath = resolveRelativePath(relativePath)
     const fileContent = fs.readFileSync(filePath, 'utf8')
-    const json = JSON.parse(fileContent)
+    const json = JSON.parse(fileContent) as { version: string }
     return json
   } catch (error) {
+    console.error(error)
+
     return null
   }
 }

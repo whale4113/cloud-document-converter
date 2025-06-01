@@ -13,7 +13,9 @@ export const imageDataToBlob = (
 
     const ctx = canvas.getContext('2d')
     if (!ctx) {
-      return Promise.resolve(null)
+      resolve(null)
+
+      return
     }
 
     ctx.putImageData(imageData, 0, 0)

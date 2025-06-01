@@ -1,10 +1,10 @@
 import { Second } from '@dolphin/common'
-import { FirstFileSaveOptions } from 'browser-fs-access'
+import { type FirstFileSaveOptions } from 'browser-fs-access'
 
 export const legacyFileSave = (
   blob: Blob,
   options: FirstFileSaveOptions = {},
-) => {
+): void => {
   const { fileName = 'Untitled' } = options
 
   const a = document.createElement('a')
@@ -20,7 +20,9 @@ export const legacyFileSave = (
 
       // `setTimeout()` due to
       // https://github.com/LLK/scratch-gui/issues/1783#issuecomment-426286393
-      setTimeout(() => URL.revokeObjectURL(a.href), 30 * Second)
+      setTimeout(() => {
+        URL.revokeObjectURL(a.href)
+      }, 30 * Second)
     },
     true,
   )

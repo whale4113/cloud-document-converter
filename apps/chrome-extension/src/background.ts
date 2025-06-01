@@ -1,4 +1,4 @@
-import { Flag, Message } from './common/message'
+import { type Message } from './common/message'
 
 enum MenuItemId {
   DOWNLOAD_DOCX_AS_MARKDOWN = 'download_docx_as_markdown',
@@ -56,32 +56,27 @@ const executeScriptByFlag = async (flag: string | number, tabId: number) => {
 
 chrome.contextMenus.onClicked.addListener(({ menuItemId }, tab) => {
   if (tab?.id !== undefined) {
-    executeScriptByFlag(menuItemId, tab.id)
+    executeScriptByFlag(menuItemId, tab.id).catch(console.error)
   }
 })
 
 chrome.runtime.onMessage.addListener((_message, sender, sendResponse) => {
   const message = _message as Message
 
-  if (
-    message.flag === Flag.ExecuteCopyScript ||
-    message.flag === Flag.ExecuteDownloadScript
-  ) {
-    const executeScript = async () => {
-      const activeTabs = await chrome.tabs.query({
-        currentWindow: true,
-        active: true,
-      })
+  const executeScript = async () => {
+    const activeTabs = await chrome.tabs.query({
+      currentWindow: true,
+      active: true,
+    })
 
-      const activeTabId = activeTabs.at(0)?.id
+    const activeTabId = activeTabs.at(0)?.id
 
-      if (activeTabs.length === 1 && activeTabId !== undefined) {
-        await executeScriptByFlag(message.flag, activeTabId)
-      }
+    if (activeTabs.length === 1 && activeTabId !== undefined) {
+      await executeScriptByFlag(message.flag, activeTabId)
     }
-
-    executeScript().then(sendResponse)
-
-    return true
   }
+
+  executeScript().then(sendResponse).catch(console.error)
+
+  return true
 })

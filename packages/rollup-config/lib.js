@@ -3,16 +3,27 @@ import { nodeResolve } from '@rollup/plugin-node-resolve'
 import typescript from '@rollup/plugin-typescript'
 import { globSync } from 'glob'
 
-export const defineLibConfig = () =>
+/**
+ *
+ * @param {{ tsconfig: string }} options
+ * @returns
+ */
+export const defineLibConfig = ({ tsconfig }) =>
   defineConfig({
     input: globSync('src/*.ts', {
       ignore: {
-        ignored: path => /\.d\.ts/.test(path.name),
+        ignored: path => path.name.endsWith('.d.ts'),
       },
     }),
     output: {
       dir: 'dist',
       format: 'esm',
+      sourcemap: true,
     },
-    plugins: [nodeResolve(), typescript()],
+    plugins: [
+      nodeResolve(),
+      typescript({
+        tsconfig,
+      }),
+    ],
   })

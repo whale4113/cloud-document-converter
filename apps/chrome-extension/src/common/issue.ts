@@ -44,7 +44,7 @@ function generateIssueUrl(issue: Issue): string {
   return `${baseUrl}?${params.toString()}`
 }
 
-export const reportBug = (error: unknown) => {
+export const reportBug = (error: unknown): void => {
   const url = generateIssueUrl({
     title: '',
     body: i18next.t(CommonTranslationKey.ISSUE_TEMPLATE_BODY, {

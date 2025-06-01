@@ -3,7 +3,14 @@
   "version": "1.0.0",
   "type": "module",
   "exports": {
-    "./lib": "./lib.js"
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    },
+    "./lib": {
+      "types": "./lib.d.ts",
+      "default": "./lib.js"
+    }
   },
   "scripts": {
     "format": "prettier . --write --ignore-path ../../.gitignore",
@@ -11,7 +18,7 @@
   },
   "dependencies": {
     "@rollup/plugin-node-resolve": "^15.3.0",
-    "@rollup/plugin-typescript": "^11.1.6",
+    "@rollup/plugin-typescript": "12.1.2",
     "glob": "^10.4.5",
     "tslib": "^2.8.1"
   },

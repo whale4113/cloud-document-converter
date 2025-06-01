@@ -1,4 +1,4 @@
-import { ResourceLanguage } from 'i18next'
+import { type ResourceLanguage } from 'i18next'
 
 export enum Namespace {
   COMMON = 'common',

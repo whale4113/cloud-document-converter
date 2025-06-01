@@ -1,4 +1,4 @@
-export const compare = (a: number, b: number) => {
+export const compare = (a: number, b: number): 0 | 1 | -1 => {
   if (a === b) return 0
 
   return a > b ? 1 : -1

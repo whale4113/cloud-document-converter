@@ -1,4 +1,9 @@
 {
   "extends": "@dolphin/typescript-config/app.json",
-  "include": ["src/background.ts", "src/content.ts", "src/chrome-types.d.ts"]
+  "include": [
+    "src/background.ts",
+    "src/content.ts",
+    "src/chrome-types.d.ts",
+    "src/popup"
+  ]
 }

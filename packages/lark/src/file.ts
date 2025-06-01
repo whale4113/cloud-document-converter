@@ -12,6 +12,11 @@ export const resolveFileDownloadUrl = ({
 }): string => {
   const pathname = `/space${BASE_PATHNAME}${token}`
   const hostname = window.globalConfig?.drive_api?.[0]
+
+  if (!hostname) {
+    throw new Error('Failed to resolve file download url')
+  }
+
   const url = new URL('https://' + hostname + pathname)
   url.searchParams.set('mount_node_token', recordId)
   url.searchParams.set('mount_point', 'docx_file')

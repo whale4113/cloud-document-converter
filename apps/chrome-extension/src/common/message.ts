@@ -4,7 +4,7 @@ export enum Flag {
 }
 
 interface ExecuteScriptMessage {
-  flag: Flag.ExecuteCopyScript | Flag.ExecuteDownloadScript
+  flag: Flag
 }
 
 export type Message = ExecuteScriptMessage

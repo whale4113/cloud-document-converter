@@ -8,7 +8,8 @@ export const waitForSelector = async (
      */
     timeout?: number
   } = {},
-) => waitForFunction(() => document.querySelector(selector) !== null, options)
+): Promise<void> =>
+  waitForFunction(() => document.querySelector(selector) !== null, options)
 
 export const waitForFunction = async (
   func: () => boolean | Promise<boolean>,
@@ -18,14 +19,14 @@ export const waitForFunction = async (
      */
     timeout?: number
   } = {},
-) => {
+): Promise<void> => {
   const { timeout = 0.4 * Second } = options
 
-  let timeoutId: number | null = setTimeout(() => {
+  let timeoutId: ReturnType<typeof setTimeout> | null = setTimeout(() => {
     timeoutId = null
   }, timeout)
 
-  const isTimeout = () => timeoutId === null
+  const isTimeout = (): boolean => timeoutId === null
 
   const _func = () => Promise.resolve(func()).catch(() => false)
 
@@ -33,11 +34,9 @@ export const waitForFunction = async (
     await waitFor(0.1 * Second)
   }
 
-  if (timeoutId !== null) {
-    clearTimeout(timeoutId)
-  }
-
   if (isTimeout()) {
     throw new Error(`Timeout waiting for function: ${func.name}`)
+  } else {
+    clearTimeout(timeoutId)
   }
 }

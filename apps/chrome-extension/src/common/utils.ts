@@ -8,7 +8,7 @@ interface WithSignalOptions {
 }
 
 export const withSignal = async <T>(
-  inner: (abortedRef: Ref<boolean>) => Promise<T> = Promise.resolve,
+  inner: (isAborted: () => boolean) => Promise<T>,
   options: WithSignalOptions = {},
 ): Promise<T | null> => {
   const { signal, onAbort } = options
@@ -27,7 +27,7 @@ export const withSignal = async <T>(
   let result = null
 
   try {
-    result = await inner(ref)
+    result = await inner(() => ref.current)
   } catch (error) {
     console.error(error)
   }
