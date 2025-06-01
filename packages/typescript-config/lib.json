@@ -3,6 +3,7 @@
   "extends": "./base.json",
   "compilerOptions": {
     "declaration": true,
+    "declarationMap": true,
     "sourceMap": true,
     "isolatedDeclarations": true
   }
