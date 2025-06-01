@@ -20,14 +20,12 @@
     "clean": "rm -rf dist",
     "build": "rollup -c",
     "type-check": "tsc --noEmit",
-    "lint": "eslint src/**",
+    "lint": "eslint .",
     "format": "prettier . --write --ignore-path ../../.gitignore",
     "format-check": "prettier . --check --ignore-path ../../.gitignore"
   },
   "devDependencies": {
-    "@dolphin/eslint-config": "workspace:^",
     "@dolphin/rollup-config": "workspace:^",
-    "@dolphin/typescript-config": "workspace:^",
     "@types/mdast": "^4.0.4",
     "rollup": "^4.24.4"
   }

@@ -25,14 +25,12 @@
     "build": "rollup -c",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
-    "lint": "eslint src/**",
+    "lint": "eslint .",
     "format": "prettier . --write --ignore-path ../../.gitignore --ignore-path ./.prettierignore",
     "format-check": "prettier . --check --ignore-path ../../.gitignore --ignore-path ./.prettierignore"
   },
   "devDependencies": {
-    "@dolphin/eslint-config": "workspace:^",
     "@dolphin/rollup-config": "workspace:^",
-    "@dolphin/typescript-config": "workspace:^",
     "@types/lodash-es": "^4.17.12",
     "@types/mdast": "^4.0.4",
     "rollup": "^4.24.4"

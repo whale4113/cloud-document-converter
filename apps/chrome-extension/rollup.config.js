@@ -15,6 +15,10 @@ const createSharedPlugins = (options = {}) => {
   const sharedPlugins = [
     typescript({
       tsconfig: `tsconfig.${runtime}.json`,
+      compilerOptions: {
+        isolatedDeclarations: false,
+        declaration: false,
+      },
     }),
     babel({
       babelHelpers: 'bundled',

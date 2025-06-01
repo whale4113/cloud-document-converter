@@ -1,4 +1,4 @@
 {
-  "extends": "@dolphin/typescript-config/base.json",
+  "extends": "@dolphin/typescript-config/app.json",
   "include": ["src/scripts/*.ts", "src/common/*.ts"]
 }

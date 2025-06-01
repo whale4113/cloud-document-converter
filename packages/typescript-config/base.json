@@ -5,8 +5,15 @@
     "module": "ES2022",
     "moduleResolution": "bundler",
     "target": "ES2022",
-    "declaration": false,
     "skipLibCheck": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "noUncheckedSideEffectImports": true,
+    "verbatimModuleSyntax": true,
+    "exactOptionalPropertyTypes": false,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "resolveJsonModule": true
   }
 }

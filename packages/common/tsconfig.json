@@ -1,7 +1,11 @@
 {
-  "extends": "@dolphin/typescript-config/lib.json",
-  "compilerOptions": {
-    "declarationDir": "dist"
-  },
-  "include": ["src"]
+  "files": [],
+  "references": [
+    {
+      "path": "./tsconfig.lib.json"
+    },
+    {
+      "path": "./tsconfig.node.json"
+    }
+  ]
 }

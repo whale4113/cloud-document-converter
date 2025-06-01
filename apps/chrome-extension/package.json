@@ -9,27 +9,23 @@
     "build:firefox": "bun run ./scripts/build-firefox.ts",
     "build:dev": "rollup -c --environment BUILD:development && mkdir -p dist && npm run copy && bun run ./scripts/add-version.ts",
     "type-check": "tsc --noEmit",
-    "lint": "eslint src/**",
+    "lint": "eslint .",
     "format": "prettier . --write --ignore-path ./.gitignore --ignore-path ../../.gitignore",
     "format-check": "prettier . --check --ignore-path ./.gitignore --ignore-path ../../.gitignore --ignore-path ./.prettierignore"
   },
   "devDependencies": {
     "@babel/core": "^7.26.0",
     "@babel/preset-env": "^7.26.0",
-    "@dolphin/eslint-config": "workspace:^",
-    "@dolphin/typescript-config": "workspace:^",
     "@rollup/plugin-babel": "^6.0.4",
     "@rollup/plugin-commonjs": "^25.0.8",
     "@rollup/plugin-json": "^6.1.0",
     "@rollup/plugin-node-resolve": "^15.3.0",
     "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-typescript": "^11.1.6",
-    "@types/node": "^22.9.3",
     "chrome-types": "0.1.321",
     "execa": "^9.5.1",
     "glob": "^10.4.5",
-    "rollup": "^4.24.4",
-    "web-ext": "^8.3.0"
+    "rollup": "^4.24.4"
   },
   "dependencies": {
     "@dolphin/common": "workspace:^",

@@ -1,4 +1,4 @@
 {
   "extends": "@dolphin/typescript-config/node.json",
-  "include": ["scripts", "rollup.config.js"]
+  "include": ["**/*.js", "**/*.ts"]
 }
