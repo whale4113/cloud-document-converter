@@ -1,0 +1,18 @@
+# root
+.github
+.vscode
+pnpm-lock.yaml
+pnpm-workspace.yaml
+
+# shared
+CHANGELOG.md
+contributing.md
+
+# apps/chrome-extension
+bundles
+dist-firefox
+web-ext-artifacts
+popup.html
+
+# apps/lark
+compiled

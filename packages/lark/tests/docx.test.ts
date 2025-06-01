@@ -1,5 +1,5 @@
 import { test, describe, expect, it } from 'vitest'
-import * as mdast from 'mdast'
+import type * as mdast from 'mdast'
 import {
   BlockType,
   Transformer,

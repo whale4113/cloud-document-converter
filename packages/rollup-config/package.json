@@ -12,10 +12,7 @@
       "default": "./lib.js"
     }
   },
-  "scripts": {
-    "format": "prettier . --write --ignore-path ../../.gitignore",
-    "format-check": "prettier . --check --ignore-path ../../.gitignore"
-  },
+  "scripts": {},
   "dependencies": {
     "@rollup/plugin-node-resolve": "^15.3.0",
     "@rollup/plugin-typescript": "12.1.2",

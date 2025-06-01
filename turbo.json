@@ -11,13 +11,8 @@
     "type-check": {
       "dependsOn": ["^build", "^type-check"]
     },
-    "lint": {
-      "dependsOn": ["^lint"]
-    },
     "test": {
       "dependsOn": ["^build", "^test"]
-    },
-    "format": {},
-    "format-check": {}
+    }
   }
 }

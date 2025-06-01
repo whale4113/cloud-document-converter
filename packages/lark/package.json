@@ -24,10 +24,7 @@
     "clean": "rm -rf dist",
     "build": "rollup -c",
     "type-check": "tsc --noEmit",
-    "test": "vitest run",
-    "lint": "eslint .",
-    "format": "prettier . --write --ignore-path ../../.gitignore --ignore-path ./.prettierignore",
-    "format-check": "prettier . --check --ignore-path ../../.gitignore --ignore-path ./.prettierignore"
+    "test": "vitest run"
   },
   "devDependencies": {
     "@dolphin/rollup-config": "workspace:^",
