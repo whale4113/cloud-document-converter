@@ -11,8 +11,7 @@ In order to download necessary tools, clone the repository, and install dependen
 You'll need the following tools:
 
 - [Git](https://git-scm.com/)
-- [Node.JS](https://nodejs.org/en/download/prebuilt-binaries), x64 or ARM64, version >=20.x
-- [Bun](https://bun.sh/)
+- [Node.JS](https://nodejs.org/en/download/prebuilt-binaries), x64 or ARM64, version >= 22.6.0
 
 ### Development container
 

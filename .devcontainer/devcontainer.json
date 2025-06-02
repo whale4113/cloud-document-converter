@@ -4,5 +4,5 @@
   "features": {
     "ghcr.io/devcontainers/features/github-cli:1": {}
   },
-  "postCreateCommand": "npm install -g pnpm@9.1.0 && curl -fsSL https://bun.sh/install | bash"
+  "postCreateCommand": "npm install -g pnpm@9.1.0"
 }

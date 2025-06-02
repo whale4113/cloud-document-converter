@@ -61,7 +61,8 @@ const main = async () => {
     },
   )
 
-  for await (const line of execa('npx', [
+  for await (const line of execa('pnpm', [
+    'dlx',
     'web-ext',
     'lint',
     '--source-dir',
