@@ -5,6 +5,9 @@
   "copy_docx_as_markdown": {
     "message": "Copy as Markdown"
   },
+  "view_docx_as_markdown": {
+    "message": "View as Markdown"
+  },
   "help_and_feedback": {
     "message": "Help and Feedback"
   }

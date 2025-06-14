@@ -72,16 +72,23 @@ const initButtons = (): void => {
         },
       },
       {
+        type: 'view',
+        innerHtml: `
+        `,
+        action: () => {
+          chrome.runtime
+            .sendMessage({ flag: 'view_docx_as_markdown' })
+            .catch(console.error)
+        },
+      },
+      {
         type: 'download',
-        innerHtml: `<svg aria-hidden="true" focusable="false" role="img" class="octicon octicon-download" viewBox="0 0 16 16"
-        width="16" height="16" fill="currentColor">
-        <path
-          d="M2.75 14A1.75 1.75 0 0 1 1 12.25v-2.5a.75.75 0 0 1 1.5 0v2.5c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25v-2.5a.75.75 0 0 1 1.5 0v2.5A1.75 1.75 0 0 1 13.25 14Z">
-        </path>
-        <path
-          d="M7.25 7.689V2a.75.75 0 0 1 1.5 0v5.689l1.97-1.969a.749.749 0 1 1 1.06 1.06l-3.25 3.25a.749.749 0 0 1-1.06 0L4.22 6.78a.749.749 0 1 1 1.06-1.06l1.97 1.969Z">
-        </path>
-      </svg>`,
+        innerHtml: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" 
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" 
+        class="octicon octicon-view" fill="currentColor">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>`,
         action: () => {
           chrome.runtime
             .sendMessage({ flag: 'download_docx_as_markdown' })

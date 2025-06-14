@@ -17,6 +17,21 @@ if (copyButton) {
   })
 }
 
+const viewButton: HTMLElement | null = document.getElementById(
+  'view_docx_as_markdown',
+)
+if (viewButton) {
+  const handleView = async () => {
+    await chrome.runtime.sendMessage({ flag: 'view_docx_as_markdown' })
+
+    window.close()
+  }
+
+  viewButton.addEventListener('click', () => {
+    handleView().catch(console.error)
+  })
+}
+
 const downloadButton: HTMLElement | null = document.getElementById(
   'download_docx_as_markdown',
 )

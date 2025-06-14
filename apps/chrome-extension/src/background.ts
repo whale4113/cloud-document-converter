@@ -3,6 +3,7 @@ import { type Message } from './common/message'
 enum MenuItemId {
   DOWNLOAD_DOCX_AS_MARKDOWN = 'download_docx_as_markdown',
   COPY_DOCX_AS_MARKDOWN = 'copy_docx_as_markdown',
+  VIEW_DOCX_AS_MARKDOWN = 'view_docx_as_markdown',
 }
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -31,6 +32,19 @@ chrome.runtime.onInstalled.addListener(() => {
     ],
     contexts: ['page', 'editable'],
   })
+
+  chrome.contextMenus.create({
+    id: MenuItemId.VIEW_DOCX_AS_MARKDOWN,
+    title: chrome.i18n.getMessage('view_docx_as_markdown'),
+    documentUrlPatterns: [
+      'https://*.feishu.cn/*',
+      'https://*.feishu.net/*',
+      'https://*.larksuite.com/*',
+      'https://*.feishu-pre.net/*',
+      'https://*.larkoffice.com/*',
+    ],
+    contexts: ['page', 'editable'],
+  })
 })
 
 const executeScriptByFlag = async (flag: string | number, tabId: number) => {
@@ -45,6 +59,13 @@ const executeScriptByFlag = async (flag: string | number, tabId: number) => {
     case MenuItemId.COPY_DOCX_AS_MARKDOWN:
       await chrome.scripting.executeScript({
         files: ['bundles/scripts/copy-lark-docx-as-markdown.js'],
+        target: { tabId },
+        world: 'MAIN',
+      })
+      break
+    case MenuItemId.VIEW_DOCX_AS_MARKDOWN:
+      await chrome.scripting.executeScript({
+        files: ['bundles/scripts/view-lark-docx-as-markdown.js'],
         target: { tabId },
         world: 'MAIN',
       })

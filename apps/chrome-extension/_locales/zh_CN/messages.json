@@ -5,6 +5,9 @@
   "copy_docx_as_markdown": {
     "message": "复制为 Markdown"
   },
+  "view_docx_as_markdown": {
+    "message": "查看为 Markdown"
+  },
   "help_and_feedback": {
     "message": "帮助和反馈"
   }
