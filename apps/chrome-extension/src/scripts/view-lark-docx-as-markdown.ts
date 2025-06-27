@@ -95,8 +95,8 @@ const main = async () => {
 
   previewWindow.document.title = 'Markdown Preview'
 
-  // Wait until the new window’s document is ready
-  previewWindow.onload = () => {
+  // prepare markdown preview for document
+  const writeViewContent = () => {
     const doc = previewWindow.document
 
     const style = doc.createElement('style')
@@ -125,6 +125,17 @@ const main = async () => {
     const pre = doc.createElement('pre')
     pre.textContent = markdown // Safe, no need to escape
     doc.body.appendChild(pre)
+  }
+
+  if (
+    previewWindow.document.readyState === 'complete' ||
+    document.readyState === 'interactive'
+  ) {
+    writeViewContent()
+  } else {
+    previewWindow.onload = () => {
+      writeViewContent()
+    }
   }
 
   if (tokens.length > 0) {

@@ -155,6 +155,10 @@ const initButtons = (): void => {
             right,
             bottom: startBottom + 2 * itemHeight,
           },
+          {
+            right,
+            bottom: startBottom + 3 * itemHeight,
+          },
         ]
       }
 
