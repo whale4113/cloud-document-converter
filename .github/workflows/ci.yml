@@ -1,8 +1,10 @@
 name: CI
 
 on:
-  - push
-  - pull_request
+  push:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    
 
 permissions:
   contents: read # to fetch code (actions/checkout)
