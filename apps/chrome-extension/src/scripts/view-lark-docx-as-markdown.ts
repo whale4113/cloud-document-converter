@@ -127,16 +127,7 @@ const main = async () => {
     doc.body.appendChild(pre)
   }
 
-  if (
-    previewWindow.document.readyState === 'complete' ||
-    document.readyState === 'interactive'
-  ) {
-    writeViewContent()
-  } else {
-    previewWindow.onload = () => {
-      writeViewContent()
-    }
-  }
+  writeViewContent()
 
   if (tokens.length > 0) {
     const isSuccess = await makePublicUrlEffective(
