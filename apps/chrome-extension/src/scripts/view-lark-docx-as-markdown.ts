@@ -89,7 +89,10 @@ const main = async () => {
   const previewWindow = window.open('', '_blank', 'width=800,height=600')
 
   if (!previewWindow) {
-    console.error('Failed to open new window.')
+    Toast.error({
+      content: i18next.t(TranslationKey.FAILED_TO_OPEN_WINDOW),
+    })
+
     return
   }
 
