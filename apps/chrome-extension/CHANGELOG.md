@@ -1,5 +1,11 @@
 # @dolphin/chrome-extension
 
+## 1.9.7
+
+### Patch Changes
+
+- [#64](https://github.com/whale4113/cloud-document-converter/pull/64) Thanks [@Shyam-NR](https://github.com/Shyam-NR)! - feat: view as markdown
+
 ## 1.9.6
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@dolphin/chrome-extension",
-  "version": "1.9.6",
+  "version": "1.9.7",
   "type": "module",
   "scripts": {
     "clean": "rm -rf bundles/* dist/* dist-firefox/*",
