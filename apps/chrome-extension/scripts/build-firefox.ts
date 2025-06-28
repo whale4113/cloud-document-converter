@@ -62,6 +62,8 @@ const main = async () => {
   )
 
   for await (const line of execa('pnpm', [
+    // @see https://github.com/fb55/css-select/issues/1592
+    '--package=css-select@5.2.0',
     'dlx',
     'web-ext',
     'lint',
