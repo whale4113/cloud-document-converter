@@ -29,6 +29,7 @@
     "@dolphin/lark": "workspace:^",
     "@zip.js/zip.js": "^2.7.53",
     "browser-fs-access": "^0.35.0",
+    "es-toolkit": "^1.39.5",
     "filenamify": "^6.0.0",
     "i18next": "^23.16.4",
     "radash": "^12.1.0",

@@ -1,3 +1,5 @@
+import { chunk } from 'es-toolkit/array'
+
 const COMMENT_BUTTON_CLASS = '.docx-comment__first-comment-btn'
 const HELP_BLOCK_CLASS = '.help-block'
 
@@ -123,7 +125,7 @@ const initButtons = (): void => {
       }
     })
 
-    const getOriginalBtnPos = () => {
+    const getOriginalBtnPos = (buttons: Button[]) => {
       const helpBlock: HTMLDivElement | null =
         root.querySelector(HELP_BLOCK_CLASS)
       if (!helpBlock) {
@@ -138,28 +140,18 @@ const initButtons = (): void => {
       const commentButton: HTMLDivElement | null =
         root.querySelector(COMMENT_BUTTON_CLASS)
 
+      const defaultBtnHeight = 36
+      const defaultGap = 14
+
       // Comment button may not be displayed
       if (!commentButton) {
         const startBottom = windowHeight - helpBlockRect.bottom
         const right = windowWidth - helpBlockRect.right
-        const btnHeight = 36
-        const gap = 14
-        const itemHeight = gap + btnHeight
 
-        return [
-          {
-            right,
-            bottom: startBottom + 1 * itemHeight,
-          },
-          {
-            right,
-            bottom: startBottom + 2 * itemHeight,
-          },
-          {
-            right,
-            bottom: startBottom + 3 * itemHeight,
-          },
-        ]
+        return buttons.map((_, index) => ({
+          right,
+          bottom: startBottom + (index + 1) * (defaultGap + defaultBtnHeight),
+        }))
       }
 
       const commentButtonRect = commentButton.getBoundingClientRect()
@@ -168,33 +160,48 @@ const initButtons = (): void => {
         const btnHeight = commentButtonRect.height
         const gap =
           Math.abs(helpBlockRect.bottom - commentButtonRect.bottom) - btnHeight
-        const min = Math.min(
+        const initialBottom = Math.max(
           windowHeight - commentButtonRect.bottom,
           windowHeight - helpBlockRect.bottom,
         )
 
-        return [
-          {
-            right: windowWidth - commentButtonRect.right,
-            bottom: min + 2 * gap + 2 * btnHeight,
-          },
-          {
-            right: windowWidth - helpBlockRect.right,
-            bottom: min + 3 * gap + 3 * btnHeight,
-          },
-        ]
+        return buttons.map((_, index) => ({
+          right: windowWidth - commentButtonRect.right,
+          bottom: initialBottom + (index + 1) * (gap + btnHeight),
+        }))
       } else if (commentButtonRect.bottom === helpBlockRect.bottom) {
-        return [
-          { right: windowWidth - commentButtonRect.right, bottom: 90 },
-          { right: windowWidth - helpBlockRect.right, bottom: 90 },
-        ]
+        let bottom = windowHeight - commentButtonRect.bottom
+
+        return chunk(buttons, 2)
+          .map(items => {
+            bottom += defaultGap + defaultBtnHeight
+
+            if (items.length === 2) {
+              return [
+                { right: windowWidth - commentButtonRect.right, bottom },
+                { right: windowWidth - helpBlockRect.right, bottom },
+              ]
+            }
+
+            const minRight =
+              windowWidth -
+              Math.max(commentButtonRect.right, helpBlockRect.right)
+
+            return [
+              {
+                right: minRight,
+                bottom,
+              },
+            ]
+          })
+          .flat()
       }
 
       return
     }
 
     const layout = (buttons: Button[]) => {
-      const pos = getOriginalBtnPos()
+      const pos = getOriginalBtnPos(buttons)
       if (!pos) return
 
       buttons.forEach((button, index) => {

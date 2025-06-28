@@ -18,6 +18,7 @@ const createSharedPlugins = (options = {}) => {
   const { runtime } = options
 
   const sharedPlugins = [
+    nodeResolve(),
     typescript({
       tsconfig: `tsconfig.${runtime}.json`,
       compilerOptions: {
@@ -54,6 +55,6 @@ export default defineConfig([
       dir: 'bundles/scripts',
       format: 'iife',
     },
-    plugins: [nodeResolve(), ...createSharedPlugins({ runtime: 'web' })],
+    plugins: [...createSharedPlugins({ runtime: 'web' })],
   })),
 ])
