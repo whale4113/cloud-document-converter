@@ -5,6 +5,10 @@
       "outputs": ["dist/**"],
       "dependsOn": ["clean", "^build"]
     },
+    "build:dev": {
+      "outputs": ["dist/**"],
+      "dependsOn": ["clean", "^build"]
+    },
     "clean": {
       "cache": false
     },

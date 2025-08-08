@@ -15,7 +15,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['**/rollup.config.js'],
+    files: ['**/rollup.config.js', '**/rollup-config/*.js'],
     languageOptions: {
       globals: {
         ...globals.node,
@@ -23,6 +23,6 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ['**/dist/', '**/bundles/', '**/compiled/'],
+    ignores: ['**/dist/', '**/bundles/', '**/compiled/', '**/*.d.ts'],
   },
 )
