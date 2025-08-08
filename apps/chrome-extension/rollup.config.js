@@ -5,6 +5,7 @@ import json from '@rollup/plugin-json'
 import commonjs from '@rollup/plugin-commonjs'
 import { babel } from '@rollup/plugin-babel'
 import terser from '@rollup/plugin-terser'
+import replace from '@rollup/plugin-replace'
 import { globSync } from 'glob'
 
 const isDev = process.env.BUILD === 'development'
@@ -33,6 +34,10 @@ const createSharedPlugins = (options = {}) => {
     }),
     commonjs(),
     json(),
+    replace({
+      preventAssignment: true,
+      'import.meta.env.DEV': JSON.stringify(isDev),
+    }),
     ...(isDev ? [] : [terser()]),
   ]
 

@@ -14,11 +14,19 @@
     "./image": {
       "types": "./dist/image.d.ts",
       "default": "./dist/image.js"
+    },
+    "./env": {
+      "types": "./env.d.ts"
+    },
+    "./dev": {
+      "types": "./dist/dev.d.ts",
+      "default": "./dist/dev.js"
     }
   },
   "scripts": {
     "clean": "rm -rf dist",
     "build": "rollup -c",
+    "build:dev": "rollup -c --environment BUILD:development",
     "type-check": "tsc --noEmit",
     "test": "vitest run"
   },

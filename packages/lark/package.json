@@ -23,6 +23,7 @@
   "scripts": {
     "clean": "rm -rf dist",
     "build": "rollup -c",
+    "build:dev": "rollup -c --environment BUILD:development",
     "type-check": "tsc --noEmit",
     "test": "vitest run"
   },

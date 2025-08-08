@@ -1,3 +1,4 @@
+import { isConsoleEventData } from '@dolphin/common/dev'
 import { chunk } from 'es-toolkit/array'
 
 const COMMENT_BUTTON_CLASS = '.docx-comment__first-comment-btn'
@@ -323,3 +324,13 @@ const urlChangeObserver: MutationObserver = new MutationObserver(() => {
   }
 })
 urlChangeObserver.observe(document.body, { childList: true })
+
+if (import.meta.env.DEV) {
+  window.addEventListener('message', event => {
+    if (event.source !== window) return
+
+    if (isConsoleEventData(event.data)) {
+      console.log('console:', ...event.data.payload)
+    }
+  })
+}

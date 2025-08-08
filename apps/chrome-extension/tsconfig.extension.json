@@ -1,5 +1,8 @@
 {
   "extends": "@dolphin/typescript-config/app.json",
+  "compilerOptions": {
+    "types": ["@dolphin/common/env"]
+  },
   "include": [
     "src/background.ts",
     "src/content.ts",
