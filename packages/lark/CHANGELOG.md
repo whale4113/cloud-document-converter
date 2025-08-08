@@ -1,5 +1,11 @@
 # @dolphin/lark
 
+## 2.5.5
+
+### Patch Changes
+
+- [#72](https://github.com/whale4113/cloud-document-converter/pull/72) [`910e8fd`](https://github.com/whale4113/cloud-document-converter/commit/910e8fd84ea3b7f5b3f655594f39a393563f4f87) Thanks [@whale4113](https://github.com/whale4113)! - failed to fetch image sources (#69)
+
 ## 2.5.4
 
 ### Patch Changes
