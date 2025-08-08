@@ -1,5 +1,14 @@
 # @dolphin/chrome-extension
 
+## 1.9.8
+
+### Patch Changes
+
+- [#72](https://github.com/whale4113/cloud-document-converter/pull/72) [`90d757c`](https://github.com/whale4113/cloud-document-converter/commit/90d757c91acba133dd1595941d90a7ed7e5d081b) Thanks [@whale4113](https://github.com/whale4113)! - enable larkenterprise.com (#70)
+
+- Updated dependencies [[`910e8fd`](https://github.com/whale4113/cloud-document-converter/commit/910e8fd84ea3b7f5b3f655594f39a393563f4f87)]:
+  - @dolphin/lark@2.5.5
+
 ## 1.9.7
 
 ### Patch Changes
