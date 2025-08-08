@@ -223,11 +223,17 @@ interface ImageBlock extends Block {
     image: ImageBlockData
   }
   imageManager: {
-    fetch: <T extends ImageSources>(
-      image: { token: string; isHD: boolean },
+    fetch: (
+      image: {
+        token: string
+        isHD: boolean
+        fuzzy: boolean
+        width?: number
+        height?: number
+      },
       options: unknown,
-      callback: (sources: ImageSources) => T,
-    ) => Promise<T>
+      callback: (sources: ImageSources) => void,
+    ) => Promise<void>
   }
 }
 
@@ -677,16 +683,19 @@ export const transformOperationsToPhrasingContents = (
   return mergePhrasingContents(nodes)
 }
 
-const fetchImageSources = (imageBlock: ImageBlock) => {
-  const {
-    imageManager,
-    snapshot: {
-      image: { token },
-    },
-  } = imageBlock
+const fetchImageSources = (imageBlock: ImageBlock) =>
+  new Promise<ImageSources>((resolve, reject) => {
+    const {
+      imageManager,
+      snapshot: {
+        image: { token },
+      },
+    } = imageBlock
 
-  return imageManager.fetch({ token, isHD: true }, {}, sources => sources)
-}
+    imageManager
+      .fetch({ token, isHD: true, fuzzy: false }, {}, resolve)
+      .catch(reject)
+  })
 
 const whiteboardToImageData = async (
   whiteboard: Whiteboard,
