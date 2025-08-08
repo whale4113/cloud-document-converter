@@ -1,5 +1,14 @@
 import { type Message } from './common/message'
 
+const sharedDocumentUrlPatterns: string[] = [
+  'https://*.feishu.cn/*',
+  'https://*.feishu.net/*',
+  'https://*.larksuite.com/*',
+  'https://*.feishu-pre.net/*',
+  'https://*.larkoffice.com/*',
+  'https://*.larkenterprise.com/*',
+]
+
 enum MenuItemId {
   DOWNLOAD_DOCX_AS_MARKDOWN = 'download_docx_as_markdown',
   COPY_DOCX_AS_MARKDOWN = 'copy_docx_as_markdown',
@@ -10,39 +19,21 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: MenuItemId.DOWNLOAD_DOCX_AS_MARKDOWN,
     title: chrome.i18n.getMessage('download_docx_as_markdown'),
-    documentUrlPatterns: [
-      'https://*.feishu.cn/*',
-      'https://*.feishu.net/*',
-      'https://*.larksuite.com/*',
-      'https://*.feishu-pre.net/*',
-      'https://*.larkoffice.com/*',
-    ],
+    documentUrlPatterns: sharedDocumentUrlPatterns,
     contexts: ['page', 'editable'],
   })
 
   chrome.contextMenus.create({
     id: MenuItemId.COPY_DOCX_AS_MARKDOWN,
     title: chrome.i18n.getMessage('copy_docx_as_markdown'),
-    documentUrlPatterns: [
-      'https://*.feishu.cn/*',
-      'https://*.feishu.net/*',
-      'https://*.larksuite.com/*',
-      'https://*.feishu-pre.net/*',
-      'https://*.larkoffice.com/*',
-    ],
+    documentUrlPatterns: sharedDocumentUrlPatterns,
     contexts: ['page', 'editable'],
   })
 
   chrome.contextMenus.create({
     id: MenuItemId.VIEW_DOCX_AS_MARKDOWN,
     title: chrome.i18n.getMessage('view_docx_as_markdown'),
-    documentUrlPatterns: [
-      'https://*.feishu.cn/*',
-      'https://*.feishu.net/*',
-      'https://*.larksuite.com/*',
-      'https://*.feishu-pre.net/*',
-      'https://*.larkoffice.com/*',
-    ],
+    documentUrlPatterns: sharedDocumentUrlPatterns,
     contexts: ['page', 'editable'],
   })
 })
