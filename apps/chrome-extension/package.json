@@ -11,29 +11,29 @@
     "type-check": "tsc --noEmit"
   },
   "devDependencies": {
-    "@babel/core": "^7.26.0",
-    "@babel/preset-env": "^7.26.0",
-    "@rollup/plugin-babel": "^6.0.4",
-    "@rollup/plugin-commonjs": "^25.0.8",
-    "@rollup/plugin-json": "^6.1.0",
-    "@rollup/plugin-node-resolve": "^15.3.0",
-    "@rollup/plugin-replace": "^6.0.2",
-    "@rollup/plugin-terser": "^0.4.4",
-    "@rollup/plugin-typescript": "^11.1.6",
-    "chrome-types": "0.1.321",
-    "execa": "^9.5.1",
-    "glob": "^10.4.5",
-    "rollup": "^4.24.4"
+    "@babel/core": "catalog:dev",
+    "@babel/preset-env": "catalog:node",
+    "@rollup/plugin-babel": "catalog:build",
+    "@rollup/plugin-commonjs": "catalog:build",
+    "@rollup/plugin-json": "catalog:build",
+    "@rollup/plugin-node-resolve": "catalog:build",
+    "@rollup/plugin-replace": "catalog:build",
+    "@rollup/plugin-terser": "catalog:build",
+    "@rollup/plugin-typescript": "catalog:build",
+    "chrome-types": "catalog:dev",
+    "execa": "catalog:node",
+    "glob": "catalog:node",
+    "rollup": "catalog:build"
   },
   "dependencies": {
     "@dolphin/common": "workspace:^",
     "@dolphin/lark": "workspace:^",
-    "@zip.js/zip.js": "^2.7.53",
-    "browser-fs-access": "^0.35.0",
-    "es-toolkit": "^1.39.5",
-    "filenamify": "^6.0.0",
-    "i18next": "^23.16.4",
-    "radash": "^12.1.0",
-    "serialize-error": "^12.0.0"
+    "@zip.js/zip.js": "catalog:prod",
+    "browser-fs-access": "catalog:network",
+    "es-toolkit": "catalog:prod",
+    "filenamify": "catalog:prod",
+    "i18next": "catalog:i18n",
+    "radash": "catalog:prod",
+    "serialize-error": "catalog:prod"
   }
 }

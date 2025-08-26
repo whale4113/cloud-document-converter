@@ -29,18 +29,18 @@
   },
   "devDependencies": {
     "@dolphin/rollup-config": "workspace:^",
-    "@types/lodash-es": "^4.17.12",
-    "@types/mdast": "^4.0.4",
-    "rollup": "^4.24.4"
+    "@types/lodash-es": "catalog:types",
+    "@types/mdast": "catalog:types",
+    "rollup": "catalog:build"
   },
   "dependencies": {
     "@dolphin/common": "workspace:^",
-    "js-base64": "^3.7.7",
-    "lodash-es": "^4.17.21",
-    "mdast-util-gfm-strikethrough": "^2.0.0",
-    "mdast-util-gfm-table": "^2.0.0",
-    "mdast-util-gfm-task-list-item": "^2.0.0",
-    "mdast-util-math": "^3.0.0",
-    "mdast-util-to-markdown": "^2.1.2"
+    "js-base64": "catalog:prod",
+    "lodash-es": "catalog:utils",
+    "mdast-util-gfm-strikethrough": "catalog:prod",
+    "mdast-util-gfm-table": "catalog:prod",
+    "mdast-util-gfm-task-list-item": "catalog:prod",
+    "mdast-util-math": "catalog:prod",
+    "mdast-util-to-markdown": "catalog:markdown"
   }
 }

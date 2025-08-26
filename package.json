@@ -13,32 +13,31 @@
     "format-check": "prettier . --check --ignore-path .gitignore --ignore-path .prettierignore",
     "prepare": "husky"
   },
-  "packageManager": "pnpm@9.1.0+sha512.67f5879916a9293e5cf059c23853d571beaf4f753c707f40cb22bed5fb1578c6aad3b6c4107ccb3ba0b35be003eb621a16471ac836c87beb53f9d54bb4612724",
   "keywords": [
     "lark",
     "markdown"
   ],
   "author": "Junji Lu",
   "devDependencies": {
-    "@changesets/changelog-github": "^0.5.0",
-    "@changesets/cli": "^2.27.9",
+    "@changesets/changelog-github": "catalog:cli",
+    "@changesets/cli": "catalog:cli",
     "@dolphin/typescript-config": "workspace:^",
-    "@eslint/js": "^9.27.0",
-    "@types/node": "22.12.0",
-    "eslint": "^9.27.0",
-    "globals": "^16.2.0",
-    "happy-dom": "^13.10.1",
-    "husky": "^9.1.7",
-    "lint-staged": "^16.1.0",
-    "prettier": "^3.3.3",
-    "turbo": "^2.5.3",
-    "typescript": "^5.8.3",
-    "typescript-eslint": "^8.32.1",
-    "vite": "^5.4.10",
-    "vitest": "^1.6.0"
+    "@eslint/js": "catalog:lint",
+    "@types/node": "catalog:types",
+    "eslint": "catalog:lint",
+    "globals": "catalog:node",
+    "happy-dom": "catalog:dev",
+    "husky": "catalog:lint",
+    "lint-staged": "catalog:lint",
+    "prettier": "catalog:lint",
+    "turbo": "catalog:monorepo",
+    "typescript": "catalog:dev",
+    "typescript-eslint": "catalog:lint",
+    "vite": "catalog:build",
+    "vitest": "catalog:test"
   },
   "dependencies": {
-    "core-js": "3.36.0"
+    "core-js": "catalog:prod"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
@@ -48,8 +47,9 @@
       "prettier --check --ignore-path .gitignore --ignore-path .prettierignore"
     ]
   },
+  "packageManager": "pnpm@10.15.0",
   "volta": {
-    "node": "22.12.0",
-    "pnpm": "9.1.0"
+    "node": "22.18.0",
+    "pnpm": "10.15.0"
   }
 }
