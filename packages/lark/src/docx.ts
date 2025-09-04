@@ -313,13 +313,29 @@ interface File extends Block {
   }
 }
 
+interface ISVBlock extends Block {
+  type: BlockType.ISV
+  snapshot: {
+    type: BlockType.ISV
+    block_type_id?: string
+    manifest?: {
+      app_version?: string
+      view_type?: string
+    }
+    data?: {
+      data?: string
+      theme?: string
+      view?: string
+    }
+  }
+}
+
 interface NotSupportedBlock extends Block {
   type:
     | BlockType.QUOTE
     | BlockType.BITABLE
     | BlockType.CHAT_CARD
     | BlockType.DIAGRAM
-    | BlockType.ISV
     | BlockType.MINDNOTE
     | BlockType.SHEET
     | BlockType.FALLBACK
@@ -347,6 +363,7 @@ type Blocks =
   | View
   | File
   | IframeBlock
+  | ISVBlock
   | NotSupportedBlock
 
 interface IframeBlock extends Block {
@@ -749,7 +766,9 @@ type Mutate<T extends Block> = T extends PageBlock
                         ? mdast.Link
                         : T extends IframeBlock
                           ? mdast.Html
-                          : null
+                          : T extends ISVBlock
+                            ? mdast.Code
+                            : null
 
 interface TransformerOptions {
   /**
@@ -1115,6 +1134,47 @@ export class Transformer {
       }
       case BlockType.IFRAME: {
         return iframeToHTML(block)
+      }
+      case BlockType.ISV: {
+        const { data } = block.snapshot
+
+        // 通过内容特征判断是否为文本绘图组件
+        const content = data?.data?.trim() ?? ''
+
+        // 检查是否以 Mermaid 关键词开头
+        const mermaidKeywords = [
+          'mindmap',
+          'flowchart',
+          'graph',
+          'sequenceDiagram',
+          'classDiagram',
+          'stateDiagram',
+          'erDiagram',
+          'journey',
+          'gantt',
+          'pie',
+          'gitgraph',
+          'timeline',
+        ]
+
+        const isMermaidDiagram = mermaidKeywords.some(keyword =>
+          content.toLowerCase().startsWith(keyword.toLowerCase()),
+        )
+
+        if (isMermaidDiagram) {
+          const code: mdast.Code = {
+            type: 'code',
+            lang: 'mermaid',
+            value: content,
+            data: {
+              theme: data?.theme,
+              view: data?.view,
+            },
+          }
+          return code
+        }
+
+        return null
       }
       default:
         return null
