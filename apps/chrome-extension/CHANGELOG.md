@@ -1,5 +1,14 @@
 # @dolphin/chrome-extension
 
+## 1.9.9
+
+### Patch Changes
+
+- [#77](https://github.com/whale4113/cloud-document-converter/pull/77) [`eb1e6fd`](https://github.com/whale4113/cloud-document-converter/commit/eb1e6fd810aa71fc7e9468337a62e672d7573ab3) Thanks [@acmol](https://github.com/acmol)! - Add support for Text drawing (Mermaid diagrams)
+
+- Updated dependencies [[`eb1e6fd`](https://github.com/whale4113/cloud-document-converter/commit/eb1e6fd810aa71fc7e9468337a62e672d7573ab3)]:
+  - @dolphin/lark@2.6.0
+
 ## 1.9.8
 
 ### Patch Changes
