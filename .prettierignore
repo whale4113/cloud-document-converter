@@ -4,9 +4,8 @@
 pnpm-lock.yaml
 pnpm-workspace.yaml
 
-# shared
-CHANGELOG.md
-contributing.md
+# Markdown
+*.md
 
 # apps/chrome-extension
 bundles
