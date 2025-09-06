@@ -313,22 +313,53 @@ interface File extends Block {
   }
 }
 
-interface ISVBlock extends Block {
+enum ISVBlockTypeId {
+  /**
+   * Text Drawing
+   */
+  TextDrawing = 'blk_631fefbbae02400430b8f9f4',
+  /**
+   * Other ISV block (type inference)
+   */
+  _Other = '',
+}
+
+interface OtherISVBlock extends Block {
   type: BlockType.ISV
   snapshot: {
     type: BlockType.ISV
-    block_type_id?: string
-    manifest?: {
-      app_version?: string
-      view_type?: string
-    }
-    data?: {
-      data?: string
-      theme?: string
-      view?: string
+    /**
+     * ISV block type id
+     */
+    block_type_id: ISVBlockTypeId._Other
+    /**
+     * ISV block data
+     */
+    data: unknown
+  }
+}
+
+interface TextDrawingBlock extends Block {
+  type: BlockType.ISV
+  snapshot: {
+    type: BlockType.ISV
+    /**
+     * ISV block type id
+     */
+    block_type_id: ISVBlockTypeId.TextDrawing
+    /**
+     * ISV block data
+     */
+    data: {
+      /**
+       * Mermaid code
+       */
+      data: string
     }
   }
 }
+
+type ISVBlocks = TextDrawingBlock | OtherISVBlock
 
 interface NotSupportedBlock extends Block {
   type:
@@ -363,7 +394,7 @@ type Blocks =
   | View
   | File
   | IframeBlock
-  | ISVBlock
+  | ISVBlocks
   | NotSupportedBlock
 
 interface IframeBlock extends Block {
@@ -766,7 +797,7 @@ type Mutate<T extends Block> = T extends PageBlock
                         ? mdast.Link
                         : T extends IframeBlock
                           ? mdast.Html
-                          : T extends ISVBlock
+                          : T extends TextDrawingBlock
                             ? mdast.Code
                             : null
 
@@ -1136,41 +1167,13 @@ export class Transformer {
         return iframeToHTML(block)
       }
       case BlockType.ISV: {
-        const { data } = block.snapshot
-
-        // 通过内容特征判断是否为文本绘图组件
-        const content = data?.data?.trim() ?? ''
-
-        // 检查是否以 Mermaid 关键词开头
-        const mermaidKeywords = [
-          'mindmap',
-          'flowchart',
-          'graph',
-          'sequenceDiagram',
-          'classDiagram',
-          'stateDiagram',
-          'erDiagram',
-          'journey',
-          'gantt',
-          'pie',
-          'gitgraph',
-          'timeline',
-        ]
-
-        const isMermaidDiagram = mermaidKeywords.some(keyword =>
-          content.toLowerCase().startsWith(keyword.toLowerCase()),
-        )
-
-        if (isMermaidDiagram) {
+        if (block.snapshot.block_type_id === ISVBlockTypeId.TextDrawing) {
           const code: mdast.Code = {
             type: 'code',
             lang: 'mermaid',
-            value: content,
-            data: {
-              theme: data?.theme,
-              view: data?.view,
-            },
+            value: block.snapshot.data.data,
           }
+
           return code
         }
 
