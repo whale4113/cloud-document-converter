@@ -313,13 +313,60 @@ interface File extends Block {
   }
 }
 
+enum ISVBlockTypeId {
+  /**
+   * Text Drawing
+   */
+  TextDrawing = 'blk_631fefbbae02400430b8f9f4',
+  /**
+   * Other ISV block (type inference)
+   */
+  _Other = '',
+}
+
+interface OtherISVBlock extends Block {
+  type: BlockType.ISV
+  snapshot: {
+    type: BlockType.ISV
+    /**
+     * ISV block type id
+     */
+    block_type_id: ISVBlockTypeId._Other
+    /**
+     * ISV block data
+     */
+    data: unknown
+  }
+}
+
+interface TextDrawingBlock extends Block {
+  type: BlockType.ISV
+  snapshot: {
+    type: BlockType.ISV
+    /**
+     * ISV block type id
+     */
+    block_type_id: ISVBlockTypeId.TextDrawing
+    /**
+     * ISV block data
+     */
+    data: {
+      /**
+       * Mermaid code
+       */
+      data: string
+    }
+  }
+}
+
+type ISVBlocks = TextDrawingBlock | OtherISVBlock
+
 interface NotSupportedBlock extends Block {
   type:
     | BlockType.QUOTE
     | BlockType.BITABLE
     | BlockType.CHAT_CARD
     | BlockType.DIAGRAM
-    | BlockType.ISV
     | BlockType.MINDNOTE
     | BlockType.SHEET
     | BlockType.FALLBACK
@@ -347,6 +394,7 @@ type Blocks =
   | View
   | File
   | IframeBlock
+  | ISVBlocks
   | NotSupportedBlock
 
 interface IframeBlock extends Block {
@@ -749,7 +797,9 @@ type Mutate<T extends Block> = T extends PageBlock
                         ? mdast.Link
                         : T extends IframeBlock
                           ? mdast.Html
-                          : null
+                          : T extends TextDrawingBlock
+                            ? mdast.Code
+                            : null
 
 interface TransformerOptions {
   /**
@@ -1115,6 +1165,19 @@ export class Transformer {
       }
       case BlockType.IFRAME: {
         return iframeToHTML(block)
+      }
+      case BlockType.ISV: {
+        if (block.snapshot.block_type_id === ISVBlockTypeId.TextDrawing) {
+          const code: mdast.Code = {
+            type: 'code',
+            lang: 'mermaid',
+            value: block.snapshot.data.data,
+          }
+
+          return code
+        }
+
+        return null
       }
       default:
         return null
