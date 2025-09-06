@@ -27,25 +27,25 @@ Install Cloud Document Converter from [Chrome Web Store](https://chromewebstore.
 
 | **Lark Doc**                          | **Support**      | **Markdown**                      |
 | ------------------------------------- | ---------------- | --------------------------------- |
-| Divider                               | ✔️               | Thematic Break                    |
-| Headings (Level 1 to level 6)         | ✔️               | ATX Headings (Level 1 to level 6) |
-| Headings (Level 7 to level 9)         | ✔️               | Paragraph                         |
-| Code Block                            | ✔️               | Code Block                        |
-| Quote                                 | ✔️               | Blockquote                        |
-| Bullet list                           | ✔️               | Bullet list                       |
-| Ordered list                          | ✔️               | Ordered list                      |
-| Task list                             | ✔️               | Task list                         |
-| Table                                 | ✔️               | Table                             |
-| Image                                 | ✔️               | Image                             |
-| Inline Math                           | ✔️               | Math Block                        |
-| Call Out                              | ❌               | Blockquote                        |
-| Diagram (Flowcharts and UML diagrams) | ❌               | Image (Download only)             |
-| Grid                                  | ❌               | _Its content is flattened_        |
+| Divider                               | ✅                | Thematic Break                    |
+| Headings (Level 1 to level 6)         | ✅                | ATX Headings (Level 1 to level 6) |
+| Headings (Level 7 to level 9)         | ✅                | Paragraph                         |
+| Code Block                            | ✅                | Code Block                        |
+| Quote                                 | ✅                | Blockquote                        |
+| Bullet list                           | ✅                | Bullet list                       |
+| Ordered list                          | ✅                | Ordered list                      |
+| Task list                             | ✅                | Task list                         |
+| Table                                 | ✅                | Table                             |
+| Image                                 | ✅                | Image                             |
+| Inline Math                           | ✅                | Math Block                        |
+| Call Out                              | ❌                | Blockquote                        |
+| Diagram (Flowcharts and UML diagrams) | ❌                | Image (Download only)             |
+| Grid                                  | ❌                | _Its content is flattened_        |
 | Bitable                               | To be determined |                                   |
 | Chat Card                             | To be determined |                                   |
-| File                                  | ❌               | Link (Download only)              |
-| Iframe                                | ✔️               | HTML                              |
-| ISV                                   | To be determined |                                   |
+| File                                  | ❌                | Link (Download only)              |
+| Iframe                                | ✅                | HTML                              |
+| ISV                                   | To be determined | Text drawing -> Code Block ✅      |
 | Mind Note                             | To be determined |                                   |
 | Sheet                                 | To be determined |                                   |
 
@@ -53,11 +53,11 @@ Install Cloud Document Converter from [Chrome Web Store](https://chromewebstore.
 
 | **Lark Doc** | **Support**      | **Markdown** |
 | ------------ | ---------------- | ------------ |
-| Bold         | ✔️               | Bold         |
-| Delete       | ✔️               | Delete       |
-| Italic       | ✔️               | Italic       |
-| Inline code  | ✔️               | Inline code  |
-| Link         | ✔️               | Link         |
+| Bold         | ✅                | Bold         |
+| Delete       | ✅                | Delete       |
+| Italic       | ✅                | Italic       |
+| Inline code  | ✅                | Inline code  |
+| Link         | ✅                | Link         |
 | Underline    | To be determined |              |
 
 ## Other

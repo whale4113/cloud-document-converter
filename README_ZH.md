@@ -27,25 +27,25 @@ Cloud Document Converter 是一个浏览器扩展， 支持下载、复制飞书
 
 | **飞书云文档**        | **支持情况** | **Markdown**                      |
 | --------------------- | ------------ | --------------------------------- |
-| 分割线                | ✔️           | Thematic Break                    |
-| 标题 (一级至六级)     | ✔️           | ATX Headings (Level 1 to level 6) |
-| 标题 (七级至九级)     | ✔️           | Paragraph                         |
-| 代码块                | ✔️           | Code Block                        |
-| 引用                  | ✔️           | Blockquote                        |
-| 无序列表              | ✔️           | Bullet list                       |
-| 有序列表              | ✔️           | Ordered list                      |
-| 任务列表              | ✔️           | Task list                         |
-| 表格                  | ✔️           | Table                             |
-| 图片                  | ✔️           | Image                             |
-| 公示                  | ✔️           | Math Block                        |
-| 高亮块                | ❌           | Blockquote                        |
-| 图表 (流程图、UML 图) | ❌           | Image（仅下载支持）               |
-| 分栏                  | ❌           | _分栏内容会被扁平化_              |
+| 分割线                | ✅            | Thematic Break                    |
+| 标题 (一级至六级)     | ✅            | ATX Headings (Level 1 to level 6) |
+| 标题 (七级至九级)     | ✅            | Paragraph                         |
+| 代码块                | ✅            | Code Block                        |
+| 引用                  | ✅            | Blockquote                        |
+| 无序列表              | ✅            | Bullet list                       |
+| 有序列表              | ✅            | Ordered list                      |
+| 任务列表              | ✅            | Task list                         |
+| 表格                  | ✅            | Table                             |
+| 图片                  | ✅            | Image                             |
+| 公示                  | ✅            | Math Block                        |
+| 高亮块                | ❌            | Blockquote                        |
+| 图表 (流程图、UML 图) | ❌            | Image（仅下载支持）               |
+| 分栏                  | ❌            | _分栏内容会被扁平化_              |
 | 多维表格              | 待定         |                                   |
 | 群名片                | 待定         |                                   |
-| 文件                  | ❌           | Link（仅下载支持）                |
-| 内嵌网页              | ✔️           | HTML                              |
-| 小组件                | 待定         |                                   |
+| 文件                  | ❌            | Link（仅下载支持）                |
+| 内嵌网页              | ✅            | HTML                              |
+| 小组件                | 待定         | 文本绘图 -> Code Block ✅          |
 | 思维笔记              | 待定         |                                   |
 | 电子表格              | 待定         |                                   |
 
@@ -53,11 +53,11 @@ Cloud Document Converter 是一个浏览器扩展， 支持下载、复制飞书
 
 | **飞书云文档** | **支持情况** | **Markdown** |
 | -------------- | ------------ | ------------ |
-| 加粗           | ✔️           | Bold         |
-| 删除线         | ✔️           | Delete       |
-| 倾斜           | ✔️           | Italic       |
-| 行内代码       | ✔️           | Inline code  |
-| 链接           | ✔️           | Link         |
+| 加粗           | ✅            | Bold         |
+| 删除线         | ✅            | Delete       |
+| 倾斜           | ✅            | Italic       |
+| 行内代码       | ✅            | Inline code  |
+| 链接           | ✅            | Link         |
 | 下划线         | 待定         |              |
 
 ## 其它
