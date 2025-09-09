@@ -35,9 +35,9 @@ $ pnpm i # install the dependencies of the project
 
 ```shell
 cd apps/chrome-extension
-npx turbo run build # build chrome extension
+pnpm run build --watch # build chrome extension
 
-# pnpm run build:firefox # build firefox extension
+# pnpm run build --watch --target firefox # build firefox extension
 ```
 
 ### Run
@@ -46,9 +46,7 @@ npx turbo run build # build chrome extension
 
 ```shell
 cd apps/chrome-extension
-npx web-ext run --source-dir dist --target chromium # 
+pnpm exec web-ext run --source-dir dist --target chromium
 
-# npx web-ext run --source-dir dist-firefox # 
+# pnpm exec web-ext run --source-dir dist --target firefox-desktop
 ```
-
-After making changes to the source files, you need to rebuild the project manually。The web-ext run command watches our dist files and tells Chromium/Firefox to reload the extension after you rebuild the project. 

@@ -1,5 +1,4 @@
 import eslint from '@eslint/js'
-import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
@@ -15,14 +14,6 @@ export default tseslint.config(
     },
   },
   {
-    files: ['**/rollup.config.js', '**/rollup-config/*.js'],
-    languageOptions: {
-      globals: {
-        ...globals.node,
-      },
-    },
-  },
-  {
-    ignores: ['**/dist/', '**/bundles/', '**/compiled/', '**/*.d.ts'],
+    ignores: ['**/dist/', '**/compiled/', '**/*.d.ts'],
   },
 )

@@ -4,34 +4,34 @@
   "type": "module",
   "exports": {
     ".": {
+      "dev": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
     "./docx": {
+      "dev": "./src/docx.ts",
       "types": "./dist/docx.d.ts",
       "default": "./dist/docx.js"
     },
     "./env": {
+      "dev": "./src/env.ts",
       "types": "./dist/env.d.ts",
       "default": "./dist/env.js"
     },
     "./image": {
+      "dev": "./src/image.ts",
       "types": "./dist/image.d.ts",
       "default": "./dist/image.js"
     }
   },
   "scripts": {
-    "clean": "rm -rf dist",
-    "build": "rollup -c",
-    "build:dev": "rollup -c --environment BUILD:development",
+    "build": "tsdown",
     "type-check": "tsc --noEmit",
     "test": "vitest run"
   },
   "devDependencies": {
-    "@dolphin/rollup-config": "workspace:^",
     "@types/lodash-es": "catalog:types",
-    "@types/mdast": "catalog:types",
-    "rollup": "catalog:build"
+    "@types/mdast": "catalog:types"
   },
   "dependencies": {
     "@dolphin/common": "workspace:^",
@@ -42,5 +42,8 @@
     "mdast-util-gfm-task-list-item": "catalog:prod",
     "mdast-util-math": "catalog:prod",
     "mdast-util-to-markdown": "catalog:markdown"
+  },
+  "volta": {
+    "extends": "../../package.json"
   }
 }

@@ -2,6 +2,7 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "extends": "./base.json",
   "compilerOptions": {
+    "target": "esnext",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,

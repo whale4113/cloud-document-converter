@@ -3,10 +3,17 @@
     [
       "@babel/preset-env",
       {
-        "targets": "defaults and fully supports es6-module",
+        "bugfixes": true,
+        "modules": "auto",
         "useBuiltIns": "usage",
-        "corejs": "3.36.0"
+        "corejs": {
+          "version": "3.36.0",
+          "proposals": false
+        },
+        "shippedProposals": true
       }
-    ]
-  ]
+    ],
+    "@babel/preset-typescript"
+  ],
+  "plugins": ["@babel/plugin-transform-runtime"]
 }

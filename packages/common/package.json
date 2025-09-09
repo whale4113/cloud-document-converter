@@ -4,35 +4,40 @@
   "type": "module",
   "exports": {
     ".": {
+      "dev": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
     "./utils": {
+      "dev": "./src/utils.ts",
       "types": "./dist/utils.d.ts",
       "default": "./dist/utils.js"
     },
     "./image": {
+      "dev": "./src/image.ts",
       "types": "./dist/image.d.ts",
       "default": "./dist/image.js"
     },
     "./env": {
-      "types": "./env.d.ts"
+      "dev": "./env.d.ts",
+      "types": "./env.d.ts",
+      "default": "./env.d.ts"
     },
     "./dev": {
+      "dev": "./src/dev.ts",
       "types": "./dist/dev.d.ts",
       "default": "./dist/dev.js"
     }
   },
   "scripts": {
-    "clean": "rm -rf dist",
-    "build": "rollup -c",
-    "build:dev": "rollup -c --environment BUILD:development",
+    "build": "tsdown",
     "type-check": "tsc --noEmit",
     "test": "vitest run"
   },
   "devDependencies": {
-    "@dolphin/rollup-config": "workspace:^",
-    "@types/mdast": "catalog:types",
-    "rollup": "catalog:build"
+    "@types/mdast": "catalog:types"
+  },
+  "volta": {
+    "extends": "../../package.json"
   }
 }

@@ -6,7 +6,6 @@
   "scripts": {
     "build": "turbo run build",
     "type-check": "turbo run type-check",
-    "clean": "turbo run clean",
     "test": "turbo run test",
     "lint": "eslint .",
     "format": "prettier . --write --ignore-path .gitignore --ignore-path .prettierignore",
@@ -24,20 +23,20 @@
     "@dolphin/typescript-config": "workspace:^",
     "@eslint/js": "catalog:lint",
     "@types/node": "catalog:types",
+    "@types/regexp.escape": "catalog:types",
+    "cac": "catalog:dev",
     "eslint": "catalog:lint",
-    "globals": "catalog:node",
     "happy-dom": "catalog:dev",
     "husky": "catalog:lint",
     "lint-staged": "catalog:lint",
     "prettier": "catalog:lint",
+    "regexp.escape": "catalog:utils",
+    "tsdown": "catalog:build",
     "turbo": "catalog:monorepo",
     "typescript": "catalog:dev",
     "typescript-eslint": "catalog:lint",
-    "vite": "catalog:build",
-    "vitest": "catalog:test"
-  },
-  "dependencies": {
-    "core-js": "catalog:prod"
+    "vitest": "catalog:test",
+    "web-ext": "catalog:tools"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
@@ -51,5 +50,8 @@
   "volta": {
     "node": "22.18.0",
     "pnpm": "10.15.0"
+  },
+  "dependencies": {
+    "core-js": "catalog:prod"
   }
 }

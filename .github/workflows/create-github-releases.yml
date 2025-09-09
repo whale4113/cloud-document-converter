@@ -1,4 +1,4 @@
-name: Create Github Releases
+name: Create GitHub Releases
 
 on:
   push:
@@ -29,21 +29,21 @@ jobs:
 
       - name: Build chrome extension
         working-directory: apps/chrome-extension
-        run: npx turbo run build
-
-      - name: Build firefox extension
-        working-directory: apps/chrome-extension
-        run: pnpm run build:firefox
+        run: pnpm run build --release
 
       - name: Package chrome extension
         working-directory: apps/chrome-extension
-        run: npx web-ext build --source-dir dist --filename {name}-{version}-chrome.zip
+        run: pnpm exec web-ext build --source-dir dist --filename {name}-{version}-chrome.zip
+
+      - name: Build firefox extension
+        working-directory: apps/chrome-extension
+        run: pnpm run build --release --target firefox
 
       - name: Package firefox extension
         working-directory: apps/chrome-extension
-        run: npx web-ext build --source-dir dist-firefox --filename {name}-{version}-firefox.zip
+        run: pnpm exec web-ext build --source-dir dist --filename {name}-{version}-firefox.zip
 
-      - name: Create Github release
+      - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
           body: Please refer to [CHANGELOG.md](https://github.com/lujunji4113/cloud-document-converter/blob/main/apps/chrome-extension/CHANGELOG.md) for details.

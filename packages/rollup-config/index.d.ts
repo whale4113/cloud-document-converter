@@ -1,1 +1,0 @@
-export { defineLibConfig } from './lib'

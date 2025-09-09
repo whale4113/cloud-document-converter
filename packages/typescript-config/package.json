@@ -1,5 +1,8 @@
 {
   "name": "@dolphin/typescript-config",
   "version": "1.0.0",
-  "scripts": {}
+  "scripts": {},
+  "volta": {
+    "extends": "../../package.json"
+  }
 }

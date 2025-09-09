@@ -3,20 +3,13 @@
   "tasks": {
     "build": {
       "outputs": ["dist/**"],
-      "dependsOn": ["clean", "^build"]
-    },
-    "build:dev": {
-      "outputs": ["dist/**"],
-      "dependsOn": ["clean", "^build"]
-    },
-    "clean": {
-      "cache": false
+      "dependsOn": []
     },
     "type-check": {
-      "dependsOn": ["^build", "^type-check"]
+      "dependsOn": []
     },
     "test": {
-      "dependsOn": ["^build", "^test"]
+      "dependsOn": []
     }
   }
 }

@@ -3,29 +3,21 @@
   "version": "1.9.9",
   "type": "module",
   "scripts": {
-    "clean": "rm -rf bundles/* dist/* dist-firefox/*",
-    "copy": "cp -R _locales bundles images manifest.json src/popup/popup.html dist",
-    "build": "rollup -c && mkdir -p dist && npm run copy && node --experimental-strip-types ./scripts/add-version.ts",
-    "build:firefox": "node --experimental-strip-types ./scripts/build-firefox.ts",
-    "build:dev": "rollup -c --environment BUILD:development && mkdir -p dist && npm run copy && node --experimental-strip-types ./scripts/add-version.ts",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "build": "node --experimental-strip-types ./scripts/cli.ts build"
   },
   "devDependencies": {
     "@babel/core": "catalog:dev",
-    "@babel/preset-env": "catalog:node",
+    "@babel/plugin-transform-runtime": "catalog:dev",
+    "@babel/preset-env": "catalog:dev",
+    "@babel/preset-typescript": "catalog:dev",
     "@rollup/plugin-babel": "catalog:build",
-    "@rollup/plugin-commonjs": "catalog:build",
-    "@rollup/plugin-json": "catalog:build",
-    "@rollup/plugin-node-resolve": "catalog:build",
-    "@rollup/plugin-replace": "catalog:build",
-    "@rollup/plugin-terser": "catalog:build",
-    "@rollup/plugin-typescript": "catalog:build",
     "chrome-types": "catalog:dev",
     "execa": "catalog:node",
-    "glob": "catalog:node",
-    "rollup": "catalog:build"
+    "glob": "catalog:node"
   },
   "dependencies": {
+    "@babel/runtime": "catalog:prod",
     "@dolphin/common": "workspace:^",
     "@dolphin/lark": "workspace:^",
     "@zip.js/zip.js": "catalog:prod",
@@ -35,5 +27,11 @@
     "i18next": "catalog:i18n",
     "radash": "catalog:prod",
     "serialize-error": "catalog:prod"
+  },
+  "browserslist": [
+    "defaults and fully supports es6-module"
+  ],
+  "volta": {
+    "extends": "../../package.json"
   }
 }
