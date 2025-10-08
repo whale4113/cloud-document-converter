@@ -27,6 +27,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Build dependencies
+        run: pnpm exec turbo run build --filter=\!@dolphin/chrome-extension
+
       - name: Build chrome extension
         working-directory: apps/chrome-extension
         run: pnpm run build --release

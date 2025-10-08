@@ -10,6 +10,8 @@ import { confirm } from '../common/notification'
 import { legacyFileSave } from '../common/legacy'
 import { reportBug } from '../common/issue'
 import { withSignal } from '../common/utils'
+import { getDownloadSettings } from '../common/settings'
+import { DownloadMethod, SettingKey } from '@/common/settings'
 
 const DOWNLOAD_ABORTED = 'Download aborted'
 
@@ -602,7 +604,12 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
     return content
   }
 
-  if (supported) {
+  const settings = await getDownloadSettings()
+
+  if (
+    settings[SettingKey.DownloadMethod] === DownloadMethod.ShowSaveFilePicker &&
+    supported
+  ) {
     if (!navigator.userActivation.isActive) {
       const confirmed = await confirm()
       if (!confirmed) {

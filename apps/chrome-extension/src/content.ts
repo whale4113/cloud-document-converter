@@ -1,5 +1,5 @@
-import { isConsoleEventData } from '@dolphin/common/dev'
 import { chunk } from 'es-toolkit/array'
+import { EventName, receiver } from './common/message'
 
 const COMMENT_BUTTON_CLASS = '.docx-comment__first-comment-btn'
 const HELP_BLOCK_CLASS = '.help-block'
@@ -325,12 +325,12 @@ const urlChangeObserver: MutationObserver = new MutationObserver(() => {
 })
 urlChangeObserver.observe(document.body, { childList: true })
 
-if (import.meta.env.DEV) {
-  window.addEventListener('message', event => {
-    if (event.source !== window) return
+receiver.on(EventName.GetSettings, async keys => {
+  return await chrome.storage.sync.get(keys)
+})
 
-    if (isConsoleEventData(event.data)) {
-      console.log('console:', ...event.data.payload)
-    }
+if (import.meta.env.DEV) {
+  receiver.on(EventName.Console, data => {
+    console.log('MAIN World Console:', ...data)
   })
 }
