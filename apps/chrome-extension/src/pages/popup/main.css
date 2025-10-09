@@ -1,0 +1,4 @@
+[data-reka-popper-content-wrapper] {
+  position: static !important;
+  transform: unset !important;
+}

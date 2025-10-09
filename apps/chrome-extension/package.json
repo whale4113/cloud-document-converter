@@ -3,30 +3,53 @@
   "version": "1.9.9",
   "type": "module",
   "scripts": {
-    "type-check": "tsc --noEmit",
-    "build": "node --experimental-strip-types ./scripts/cli.ts build"
+    "type-check": "vue-tsc -b",
+    "build": "node --experimental-strip-types ./scripts/cli.ts build",
+    "dev:pages": "vite"
   },
   "devDependencies": {
     "@babel/core": "catalog:dev",
     "@babel/plugin-transform-runtime": "catalog:dev",
     "@babel/preset-env": "catalog:dev",
     "@babel/preset-typescript": "catalog:dev",
+    "@internationalized/date": "catalog:dev",
     "@rollup/plugin-babel": "catalog:build",
+    "@tailwindcss/vite": "catalog:dev",
+    "@vitejs/plugin-vue": "catalog:dev",
+    "@vue/tsconfig": "catalog:dev",
+    "cac": "catalog:dev",
     "chrome-types": "catalog:dev",
+    "clsx": "catalog:dev",
     "execa": "catalog:node",
-    "glob": "catalog:node"
+    "glob": "catalog:node",
+    "tailwind-merge": "catalog:dev",
+    "tailwind-variants": "catalog:dev",
+    "tailwindcss": "catalog:dev",
+    "tw-animate-css": "catalog:dev",
+    "vue-tsc": "catalog:tools"
   },
   "dependencies": {
     "@babel/runtime": "catalog:prod",
     "@dolphin/common": "workspace:^",
     "@dolphin/lark": "workspace:^",
+    "@tanstack/vue-query": "catalog:prod",
+    "@vee-validate/zod": "catalog:prod",
+    "@vueuse/core": "catalog:prod",
     "@zip.js/zip.js": "catalog:prod",
     "browser-fs-access": "catalog:network",
+    "class-variance-authority": "catalog:prod",
     "es-toolkit": "catalog:prod",
     "filenamify": "catalog:prod",
     "i18next": "catalog:i18n",
+    "lucide-vue-next": "catalog:prod",
     "radash": "catalog:prod",
-    "serialize-error": "catalog:prod"
+    "reka-ui": "catalog:prod",
+    "serialize-error": "catalog:prod",
+    "vee-validate": "catalog:prod",
+    "vue": "catalog:prod",
+    "vue-i18n": "catalog:prod",
+    "vue-router": "catalog:prod",
+    "zod": "catalog:prod"
   },
   "browserslist": [
     "defaults and fully supports es6-module"

@@ -3,8 +3,11 @@ import babel from '@rollup/plugin-babel'
 import { glob } from 'glob'
 import regexpEscape from 'regexp.escape'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import packageJson from './package.json' with { type: 'json' }
 import '@dolphin/common/env'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig(async cliOptions => {
   const isDev = Boolean(cliOptions.env?.['DEV'])
@@ -16,7 +19,12 @@ export default defineConfig(async cliOptions => {
   const sharedConfig: Omit<Options, 'config' | 'filter'> = {
     inputOptions: {
       resolve: {
-        conditionNames: ['dev'],
+        alias: {
+          '@': path.resolve(__dirname, './src'),
+        },
+        ...(isDev && {
+          conditionNames: ['dev'],
+        }),
       },
     },
     platform: 'browser',
@@ -38,7 +46,7 @@ export default defineConfig(async cliOptions => {
     entry: Options['entry'],
   ): Omit<Options, 'config' | 'filter'> => ({
     entry,
-    outDir: 'dist',
+    outDir: 'dist/bundles',
     format: 'esm',
     tsconfig: 'tsconfig.extension.json',
     ...sharedConfig,
@@ -48,7 +56,7 @@ export default defineConfig(async cliOptions => {
     entry: Options['entry'],
   ): Omit<Options, 'config' | 'filter'> => ({
     entry,
-    outDir: 'dist',
+    outDir: 'dist/bundles',
     format: 'iife',
     outputOptions: {
       entryFileNames: '[name].js',
@@ -59,14 +67,13 @@ export default defineConfig(async cliOptions => {
 
   return [
     createModuleScriptConfig({
-      'bundles/background': 'src/background.ts',
+      background: 'src/background.ts',
     }),
     ...(
       [
-        { 'bundles/content': 'src/content.ts' },
-        { 'bundles/popup': 'src/popup/popup.ts' },
+        { content: 'src/content.ts' },
         ...(await glob('src/scripts/*.ts')).map(entry => ({
-          [`bundles/scripts/${path.parse(entry).name}`]: entry,
+          [`scripts/${path.parse(entry).name}`]: entry,
         })),
       ] satisfies Options['entry'][]
     ).map(createClassicScriptConfig),

@@ -1,7 +1,13 @@
 {
   "extends": "@dolphin/typescript-config/app.json",
   "compilerOptions": {
-    "types": ["@dolphin/common/env"]
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.extension.tsbuildinfo",
+    "types": ["@dolphin/common/env"],
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
   "include": [
     "src/background.ts",

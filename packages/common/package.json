@@ -23,10 +23,10 @@
       "types": "./env.d.ts",
       "default": "./env.d.ts"
     },
-    "./dev": {
-      "dev": "./src/dev.ts",
-      "types": "./dist/dev.d.ts",
-      "default": "./dist/dev.js"
+    "./message": {
+      "dev": "./src/message.ts",
+      "types": "./dist/message.d.ts",
+      "default": "./dist/message.js"
     }
   },
   "scripts": {

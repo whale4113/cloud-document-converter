@@ -1,4 +1,8 @@
 {
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+    "noEmit": true
+  },
   "extends": "@dolphin/typescript-config/node.json",
-  "include": ["scripts", "tsdown.config.ts"]
+  "include": ["scripts", "tsdown.config.ts", "vite.config.ts"]
 }
