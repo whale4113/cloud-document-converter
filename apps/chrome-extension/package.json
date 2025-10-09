@@ -17,7 +17,6 @@
     "@tailwindcss/vite": "catalog:dev",
     "@vitejs/plugin-vue": "catalog:dev",
     "@vue/tsconfig": "catalog:dev",
-    "bits-ui": "catalog:dev",
     "cac": "catalog:dev",
     "chrome-types": "catalog:dev",
     "clsx": "catalog:dev",
