@@ -1,5 +1,11 @@
 # @dolphin/chrome-extension
 
+## 1.10.1
+
+### Patch Changes
+
+- [#86](https://github.com/whale4113/cloud-document-converter/pull/86) [`704466d`](https://github.com/whale4113/cloud-document-converter/commit/704466dd0b23d4c350b2f2a05923918909209edf) Thanks [@whale4113](https://github.com/whale4113)! - fix: entry filename already exists
+
 ## 1.10.0
 
 ### Minor Changes

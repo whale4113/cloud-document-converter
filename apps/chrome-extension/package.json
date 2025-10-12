@@ -1,6 +1,6 @@
 {
   "name": "@dolphin/chrome-extension",
-  "version": "1.10.0",
+  "version": "1.10.1",
   "type": "module",
   "scripts": {
     "type-check": "vue-tsc -b",
