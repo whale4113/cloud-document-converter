@@ -5,7 +5,8 @@
   "scripts": {
     "type-check": "vue-tsc -b",
     "build": "node --experimental-strip-types ./scripts/cli.ts build",
-    "dev:pages": "vite"
+    "dev:pages": "vite",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@babel/core": "catalog:dev",

@@ -4,5 +4,11 @@
     "noEmit": true
   },
   "extends": "@dolphin/typescript-config/node.json",
-  "include": ["scripts", "tsdown.config.ts", "vite.config.ts"]
+  "include": [
+    "scripts",
+    "tests",
+    "tsdown.config.ts",
+    "vite.config.ts",
+    "vitest.config.ts"
+  ]
 }

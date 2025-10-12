@@ -39,3 +39,32 @@ export const withSignal = async <T>(
 
   return result
 }
+
+export class UniqueFileName {
+  private usedNames = new Set<string>()
+  private fileNameToPreId = new Map<string, number>()
+
+  generate(originFileName: string): string {
+    let newFileName = originFileName
+
+    while (this.usedNames.has(newFileName)) {
+      const startDotIndex = originFileName.lastIndexOf('.')
+
+      const preId = this.fileNameToPreId.get(originFileName) ?? 0
+      const id = preId + 1
+      this.fileNameToPreId.set(originFileName, id)
+
+      newFileName =
+        startDotIndex === -1
+          ? originFileName.concat(`-${id.toFixed()}`)
+          : originFileName
+              .slice(0, startDotIndex)
+              .concat(`-${id.toFixed()}`)
+              .concat(originFileName.slice(startDotIndex))
+    }
+
+    this.usedNames.add(newFileName)
+
+    return newFileName
+  }
+}
