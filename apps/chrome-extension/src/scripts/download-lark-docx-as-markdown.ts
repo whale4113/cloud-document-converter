@@ -9,9 +9,11 @@ import { CommonTranslationKey, en, Namespace, zh } from '../common/i18n'
 import { confirm } from '../common/notification'
 import { legacyFileSave } from '../common/legacy'
 import { reportBug } from '../common/issue'
-import { withSignal } from '../common/utils'
+import { UniqueFileName, withSignal } from '../common/utils'
 import { getDownloadSettings } from '../common/settings'
 import { DownloadMethod, SettingKey } from '@/common/settings'
+
+const uniqueFileName = new UniqueFileName()
 
 const DOWNLOAD_ABORTED = 'Download aborted'
 
@@ -84,32 +86,6 @@ i18next
     },
   })
   .catch(console.error)
-
-const usedNames = new Set<string>()
-const fileNameToPreId = new Map<string, number>()
-const uniqueFileName = (originFileName: string) => {
-  if (usedNames.has(originFileName)) {
-    const startDotIndex = originFileName.lastIndexOf('.')
-
-    const preId = fileNameToPreId.get(originFileName) ?? 0
-    const id = preId + 1
-    fileNameToPreId.set(originFileName, id)
-
-    const fileName =
-      startDotIndex === -1
-        ? originFileName.concat(`-${id.toFixed()}`)
-        : originFileName
-            .slice(0, startDotIndex)
-            .concat(`-${id.toFixed()}`)
-            .concat(originFileName.slice(startDotIndex))
-
-    return fileName
-  }
-
-  usedNames.add(originFileName)
-
-  return originFileName
-}
 
 interface ProgressOptions {
   onProgress?: (progress: number) => void
@@ -186,7 +162,7 @@ const downloadImage = async (
           const content = await fetchBlob()
           if (!content) return null
 
-          const name = uniqueFileName('diagram.png')
+          const name = uniqueFileName.generate('diagram.png')
           const filename = `images/${name}`
 
           image.url = filename
@@ -205,7 +181,7 @@ const downloadImage = async (
           const sources = await fetchSources()
           if (!sources) return null
 
-          const name = uniqueFileName(originName)
+          const name = uniqueFileName.generate(originName)
           const filename = `images/${name}`
 
           const { src } = sources
@@ -300,7 +276,7 @@ const downloadFile = async (
   const result = await withSignal(
     async () => {
       try {
-        const filename = `files/${uniqueFileName(name)}`
+        const filename = `files/${uniqueFileName.generate(name)}`
 
         const response = await fetchFile({ signal: controller.signal })
         try {
