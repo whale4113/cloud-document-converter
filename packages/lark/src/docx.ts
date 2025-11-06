@@ -1110,14 +1110,95 @@ export class Transformer {
         )
       }
       case BlockType.CELL: {
+        // Helper function to recursively convert mdast nodes to HTML
+        const nodeToHtml = (node: mdast.Nodes): string => {
+          switch (node.type) {
+            case 'text':
+              return node.value
+            case 'strong':
+              return `<strong>${node.children.map(nodeToHtml).join('')}</strong>`
+            case 'emphasis':
+              return `<em>${node.children.map(nodeToHtml).join('')}</em>`
+            case 'inlineCode':
+              return `<code>${node.value}</code>`
+            case 'link':
+              return `<a href="${node.url}">${node.children.map(nodeToHtml).join('')}</a>`
+            case 'delete':
+              return `<del>${node.children.map(nodeToHtml).join('')}</del>`
+            case 'break':
+              return '<br>'
+            case 'paragraph':
+              return node.children.map(nodeToHtml).join('')
+            case 'list': {
+              const listTag = node.ordered ? 'ol' : 'ul'
+              const items = node.children
+                .map(item => {
+                  // Process each child of the list item separately
+                  // to properly handle both text content and nested lists
+                  const parts = item.children.map(child => {
+                    if (child.type === 'list') {
+                      // Nested list should be rendered as a sub-list within the li
+                      return nodeToHtml(child)
+                    }
+                    if (child.type === 'paragraph') {
+                      // For paragraph, extract and render its children
+                      const text = child.children.map(nodeToHtml).join('')
+                      return text
+                    }
+                    // Other content types
+                    return nodeToHtml(child)
+                  })
+                  const content = parts.join('')
+                  // Only include non-empty list items or items with nested lists
+                  if (
+                    content.trim() ||
+                    item.children.some(c => c.type === 'list')
+                  ) {
+                    return `<li>${content}</li>`
+                  }
+                  return ''
+                })
+                .filter(item => item !== '') // Filter out empty items
+                .join('')
+              return `<${listTag}>${items}</${listTag}>`
+            }
+            case 'html':
+              return node.value
+            case 'image':
+              return `<img src="${node.url}" alt="${node.alt ?? ''}">`
+            default:
+              return ''
+          }
+        }
+
         return this.transformParentBlock(
           block,
           () => ({ type: 'tableCell', children: [] }),
-          nodes =>
-            nodes
-              .map(node => (node.type === 'paragraph' ? node.children : node))
-              .flat(1)
-              .filter(isPhrasingContent),
+          nodes => {
+            // First merge list items into lists
+            const mergedNodes = mergeListItems(nodes)
+
+            // Convert lists to HTML tags to preserve them in table cells
+            // since standard Markdown tables don't support lists
+            const processedNodes = mergedNodes.flatMap(node => {
+              if (node.type === 'paragraph') {
+                return node.children
+              }
+              if (node.type === 'list') {
+                // Convert list (and all nested content) to HTML
+                const htmlContent = nodeToHtml(node)
+                return [
+                  {
+                    type: 'html',
+                    value: htmlContent,
+                  } as mdast.Html,
+                ]
+              }
+              return [node]
+            })
+
+            return processedNodes.filter(isPhrasingContent)
+          },
         )
       }
       case BlockType.VIEW: {
