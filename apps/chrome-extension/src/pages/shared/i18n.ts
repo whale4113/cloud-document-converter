@@ -23,6 +23,11 @@ export const i18n = createI18n({
       'general.theme.light': 'Light',
       'general.theme.dark': 'Dark',
       'general.theme.system': 'System',
+      'general.table_with_non_phrasing_content':
+        'Handling of tables with non-phrasing content (list, blockquote, code block, etc.)',
+      'general.table_with_non_phrasing_content.placeholder': 'Select handling',
+      'general.table_with_non_phrasing_content.filtered': 'Filtered',
+      'general.table_with_non_phrasing_content.to_html': 'To HTML',
       'download.method': 'Download Method',
       'download.method.placeholder': 'Select download method',
       'download.method.direct': 'Direct Download',
@@ -51,6 +56,11 @@ export const i18n = createI18n({
       'general.theme.light': '浅色',
       'general.theme.dark': '深色',
       'general.theme.system': '跟随系统',
+      'general.table_with_non_phrasing_content':
+        '含有块级内容（列表、引用、代码块等）的表格的处理方式',
+      'general.table_with_non_phrasing_content.placeholder': '选择处理方式',
+      'general.table_with_non_phrasing_content.filtered': '过滤块级内容',
+      'general.table_with_non_phrasing_content.to_html': '转换为 HTML',
       'download.method': '下载方式',
       'download.method.placeholder': '选择下载方式',
       'download.method.direct': '直接下载',

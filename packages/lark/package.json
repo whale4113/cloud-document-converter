@@ -5,23 +5,23 @@
   "exports": {
     ".": {
       "dev": "./src/index.ts",
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
     },
     "./docx": {
       "dev": "./src/docx.ts",
-      "types": "./dist/docx.d.ts",
-      "default": "./dist/docx.js"
+      "types": "./dist/docx.d.mts",
+      "default": "./dist/docx.mjs"
     },
     "./env": {
       "dev": "./src/env.ts",
-      "types": "./dist/env.d.ts",
-      "default": "./dist/env.js"
+      "types": "./dist/env.d.mts",
+      "default": "./dist/env.mjs"
     },
     "./image": {
       "dev": "./src/image.ts",
-      "types": "./dist/image.d.ts",
-      "default": "./dist/image.js"
+      "types": "./dist/image.d.mts",
+      "default": "./dist/image.mjs"
     }
   },
   "scripts": {

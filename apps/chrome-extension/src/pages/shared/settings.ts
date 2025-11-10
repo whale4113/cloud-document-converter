@@ -21,7 +21,8 @@ export const useSettings = <
   Key extends keyof Settings =
     | SettingKey.Locale
     | SettingKey.Theme
-    | SettingKey.DownloadMethod,
+    | SettingKey.DownloadMethod
+    | SettingKey.TableWithNonPhrasingContent,
 >(
   options: { keys?: Key[] } = {},
 ): {
@@ -34,7 +35,12 @@ export const useSettings = <
   >
 } => {
   const {
-    keys = [SettingKey.Locale, SettingKey.Theme, SettingKey.DownloadMethod],
+    keys = [
+      SettingKey.Locale,
+      SettingKey.Theme,
+      SettingKey.DownloadMethod,
+      SettingKey.TableWithNonPhrasingContent,
+    ] as Key[],
   } = options
 
   const queryClient = useQueryClient()

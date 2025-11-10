@@ -7,6 +7,7 @@ export enum SettingKey {
   Locale = 'general.locale',
   Theme = 'general.theme',
   DownloadMethod = 'download.method',
+  TableWithNonPhrasingContent = 'general.table_with_non_phrasing_content',
 }
 
 export enum Theme {
@@ -20,10 +21,16 @@ export enum DownloadMethod {
   ShowSaveFilePicker = 'showSaveFilePicker',
 }
 
+export enum TableWithNonPhrasingContent {
+  Filtered = 'filtered',
+  ToHTML = 'toHTML',
+}
+
 export interface Settings {
   [SettingKey.Locale]: string
   [SettingKey.Theme]: (typeof Theme)[keyof typeof Theme]
   [SettingKey.DownloadMethod]: (typeof DownloadMethod)[keyof typeof DownloadMethod]
+  [SettingKey.TableWithNonPhrasingContent]: (typeof TableWithNonPhrasingContent)[keyof typeof TableWithNonPhrasingContent]
 }
 
 export const fallbackSettings: Settings = {
@@ -32,6 +39,7 @@ export const fallbackSettings: Settings = {
   [SettingKey.DownloadMethod]: supported
     ? DownloadMethod.ShowSaveFilePicker
     : DownloadMethod.Direct,
+  [SettingKey.TableWithNonPhrasingContent]: TableWithNonPhrasingContent.ToHTML,
 }
 
 export const getSettings = async <Key extends keyof Settings>(
@@ -49,7 +57,12 @@ export const getSettings = async <Key extends keyof Settings>(
 
 export const getGeneralSettings = async (): Promise<
   Pick<Settings, SettingKey.Locale | SettingKey.Theme>
-> => getSettings([SettingKey.Locale, SettingKey.Theme])
+> =>
+  getSettings([
+    SettingKey.Locale,
+    SettingKey.Theme,
+    SettingKey.TableWithNonPhrasingContent,
+  ])
 
 export const getDownloadSettings = async (): Promise<
   Pick<Settings, SettingKey.DownloadMethod>
