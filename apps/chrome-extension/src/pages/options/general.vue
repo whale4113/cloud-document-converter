@@ -23,7 +23,11 @@ import {
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { SettingKey, Theme } from '@/common/settings'
+import {
+  SettingKey,
+  TableWithNonPhrasingContent,
+  Theme,
+} from '@/common/settings'
 import { useI18n } from 'vue-i18n'
 import { useSettings } from '../shared/settings'
 
@@ -32,6 +36,7 @@ const { locale, availableLocales, t } = useI18n()
 const schema = z.object({
   [SettingKey.Locale]: z.enum(availableLocales.value),
   [SettingKey.Theme]: z.enum(Theme),
+  [SettingKey.TableWithNonPhrasingContent]: z.enum(TableWithNonPhrasingContent),
 })
 
 const { query, mutation } = useSettings()
@@ -44,7 +49,11 @@ const { meta, isSubmitting, handleSubmit, resetForm } = useForm({
 watch(query.data, newValues => {
   if (newValues) {
     resetForm({
-      values: pick(newValues, [SettingKey.Locale, SettingKey.Theme]),
+      values: pick(newValues, [
+        SettingKey.Locale,
+        SettingKey.Theme,
+        SettingKey.TableWithNonPhrasingContent,
+      ]),
     })
 
     localStorage.setItem('cache.locale', newValues[SettingKey.Locale])
@@ -107,18 +116,55 @@ const onSubmit = handleSubmit.withControlled(async values => {
                   <SelectItem
                     :key="`${locale}_${Theme.Light}`"
                     :value="Theme.Light"
-                    >{{ t('general.theme.light') }}</SelectItem
-                  >
+                    >{{ t('general.theme.light') }}
+                  </SelectItem>
                   <SelectItem
                     :key="`${locale}_${Theme.Dark}`"
                     :value="Theme.Dark"
-                    >{{ t('general.theme.dark') }}</SelectItem
-                  >
+                    >{{ t('general.theme.dark') }}
+                  </SelectItem>
                   <SelectItem
                     :key="`${locale}_${Theme.System}`"
                     :value="Theme.System"
-                    >{{ t('general.theme.system') }}</SelectItem
-                  >
+                    >{{ t('general.theme.system') }}
+                  </SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        </FormField>
+        <FormField
+          v-slot="{ componentField }"
+          :name="`[${SettingKey.TableWithNonPhrasingContent}]`"
+        >
+          <FormItem>
+            <FormLabel>{{
+              t('general.table_with_non_phrasing_content')
+            }}</FormLabel>
+            <Skeleton v-if="query.isPending.value" class="h-9 w-40" />
+            <Select v-else v-bind="componentField">
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue
+                    :placeholder="
+                      t('general.table_with_non_phrasing_content.placeholder')
+                    "
+                  />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem
+                    :key="`${locale}_${TableWithNonPhrasingContent.Filtered}`"
+                    :value="TableWithNonPhrasingContent.Filtered"
+                    >{{ t('general.table_with_non_phrasing_content.filtered') }}
+                  </SelectItem>
+                  <SelectItem
+                    :key="`${locale}_${TableWithNonPhrasingContent.ToHTML}`"
+                    :value="TableWithNonPhrasingContent.ToHTML"
+                    >{{ t('general.table_with_non_phrasing_content.to_html') }}
+                  </SelectItem>
                 </SelectGroup>
               </SelectContent>
             </Select>

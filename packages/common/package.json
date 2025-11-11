@@ -5,18 +5,18 @@
   "exports": {
     ".": {
       "dev": "./src/index.ts",
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
     },
     "./utils": {
       "dev": "./src/utils.ts",
-      "types": "./dist/utils.d.ts",
-      "default": "./dist/utils.js"
+      "types": "./dist/utils.d.mts",
+      "default": "./dist/utils.mjs"
     },
     "./image": {
       "dev": "./src/image.ts",
-      "types": "./dist/image.d.ts",
-      "default": "./dist/image.js"
+      "types": "./dist/image.d.mts",
+      "default": "./dist/image.mjs"
     },
     "./env": {
       "dev": "./env.d.ts",
@@ -25,8 +25,8 @@
     },
     "./message": {
       "dev": "./src/message.ts",
-      "types": "./dist/message.d.ts",
-      "default": "./dist/message.js"
+      "types": "./dist/message.d.mts",
+      "default": "./dist/message.mjs"
     }
   },
   "scripts": {

@@ -195,7 +195,7 @@ const initButtons = (): void => {
               },
             ]
           })
-          .flat()
+          .flat(1)
       }
 
       return

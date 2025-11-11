@@ -9,8 +9,12 @@ import { CommonTranslationKey, en, Namespace, zh } from '../common/i18n'
 import { confirm } from '../common/notification'
 import { legacyFileSave } from '../common/legacy'
 import { reportBug } from '../common/issue'
-import { UniqueFileName, withSignal } from '../common/utils'
-import { getDownloadSettings } from '../common/settings'
+import {
+  transformInvalidTablesToHtml,
+  UniqueFileName,
+  withSignal,
+} from '../common/utils'
+import { getSettings, TableWithNonPhrasingContent } from '../common/settings'
 import { DownloadMethod, SettingKey } from '@/common/settings'
 
 const uniqueFileName = new UniqueFileName()
@@ -491,7 +495,7 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
     throw new Error(DOWNLOAD_ABORTED)
   }
 
-  const { root, images, files } = docx.intoMarkdownAST({
+  const { root, images, files, invalidTables } = docx.intoMarkdownAST({
     whiteboard: true,
     file: true,
   })
@@ -503,6 +507,11 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
   const ext = isZip ? '.zip' : '.md'
   const filename = `${recommendName}${ext}`
 
+  const settings = await getSettings([
+    SettingKey.DownloadMethod,
+    SettingKey.TableWithNonPhrasingContent,
+  ])
+
   const toBlob = async () => {
     Toast.loading({
       content: i18next.t(TranslationKey.STILL_SAVING),
@@ -511,6 +520,13 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
     })
 
     const singleFileContent = () => {
+      if (
+        settings[SettingKey.TableWithNonPhrasingContent] ===
+        TableWithNonPhrasingContent.ToHTML
+      ) {
+        transformInvalidTablesToHtml(invalidTables)
+      }
+
       const markdown = Docx.stringify(root)
 
       return new Blob([markdown])
@@ -566,6 +582,13 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
         zipFs.addBlob(filename, content)
       })
 
+      if (
+        settings[SettingKey.TableWithNonPhrasingContent] ===
+        TableWithNonPhrasingContent.ToHTML
+      ) {
+        transformInvalidTablesToHtml(invalidTables)
+      }
+
       const markdown = Docx.stringify(root)
 
       zipFs.addText(`${recommendName}.md`, markdown)
@@ -579,8 +602,6 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
 
     return content
   }
-
-  const settings = await getDownloadSettings()
 
   if (
     settings[SettingKey.DownloadMethod] === DownloadMethod.ShowSaveFilePicker &&

@@ -8,7 +8,7 @@ import {
   OneHundred,
   Second,
 } from '@dolphin/common'
-import { toMarkdown } from 'mdast-util-to-markdown'
+import { toMarkdown, type Options } from 'mdast-util-to-markdown'
 import { gfmStrikethroughToMarkdown } from 'mdast-util-gfm-strikethrough'
 import { gfmTaskListItemToMarkdown } from 'mdast-util-gfm-task-list-item'
 import { gfmTableToMarkdown } from 'mdast-util-gfm-table'
@@ -40,6 +40,14 @@ declare module 'mdast' {
   interface LinkData {
     name?: string
     fetchFile?: (init?: RequestInit) => Promise<Response>
+  }
+
+  interface TableData {
+    invalid?: boolean
+  }
+
+  interface TableCellData {
+    invalidChildren?: mdast.Nodes[]
   }
 }
 
@@ -818,15 +826,22 @@ interface TransformerOptions {
   locateBlockWithRecordId?: (recordId: string) => Promise<boolean>
 }
 
+export interface InvalidTable {
+  inner: mdast.Table
+  parent: mdast.Parent | null
+}
+
 interface TransformResult<T> {
   root: T
   images: mdast.Image[]
+  invalidTables: InvalidTable[]
   files: mdast.Link[]
 }
 
 export class Transformer {
   private parent: mdast.Parent | null = null
   private images: mdast.Image[] = []
+  private invalidTables: InvalidTable[] = []
   /**
    * Resource link to file.
    */
@@ -1096,28 +1111,57 @@ export class Transformer {
         return this.normalizeImage(image)
       }
       case BlockType.TABLE: {
-        return this.transformParentBlock(
+        let table: mdast.Table = { type: 'table', children: [] }
+
+        table = this.transformParentBlock(
           block,
-          () => ({ type: 'table', children: [] }),
-          nodes =>
-            chunk(
-              nodes.filter(isTableCell),
-              block.snapshot.columns_id.length,
-            ).map(tableCells => ({
-              type: 'tableRow',
-              children: tableCells,
-            })),
+          () => table,
+          nodes => {
+            const tableCells = nodes.filter(isTableCell)
+
+            table.data = {
+              invalid: tableCells.some(cell => cell.data?.invalidChildren),
+            }
+
+            return chunk(tableCells, block.snapshot.columns_id.length).map(
+              tableCells => ({
+                type: 'tableRow',
+                children: tableCells,
+              }),
+            )
+          },
         )
+
+        if (table.data?.invalid) {
+          this.invalidTables.push({
+            inner: table,
+            parent: this.parent,
+          })
+        }
+
+        return table
       }
       case BlockType.CELL: {
+        const cell: mdast.TableCell = { type: 'tableCell', children: [] }
+
         return this.transformParentBlock(
           block,
-          () => ({ type: 'tableCell', children: [] }),
-          nodes =>
-            nodes
+          () => cell,
+          nodes => {
+            const normalizedNodes = mergeListItems(nodes)
               .map(node => (node.type === 'paragraph' ? node.children : node))
               .flat(1)
-              .filter(isPhrasingContent),
+
+            if (normalizedNodes.every(isPhrasingContent)) {
+              return normalizedNodes
+            }
+
+            cell.data = {
+              invalidChildren: normalizedNodes,
+            }
+
+            return normalizedNodes.filter(isPhrasingContent)
+          },
         )
       }
       case BlockType.VIEW: {
@@ -1190,11 +1234,13 @@ export class Transformer {
     const result: TransformResult<Mutate<T>> = {
       root: node,
       images: this.images,
+      invalidTables: this.invalidTables,
       files: this.files,
     }
 
     this.parent = null
     this.images = []
+    this.invalidTables = []
     this.files = []
     this.sequences = []
 
@@ -1203,8 +1249,9 @@ export class Transformer {
 }
 
 export class Docx {
-  static stringify(root: mdast.Root): string {
+  static stringify(root: mdast.Root, options?: Options): string {
     return toMarkdown(root, {
+      ...options,
       extensions: [
         gfmStrikethroughToMarkdown(),
         gfmTaskListItemToMarkdown(),
@@ -1212,6 +1259,7 @@ export class Docx {
         mathToMarkdown({
           singleDollarTextMath: false,
         }),
+        ...(options?.extensions ?? []),
       ],
     })
   }
@@ -1292,7 +1340,12 @@ export class Docx {
     transformerOptions: TransformerOptions = {},
   ): TransformResult<mdast.Root> {
     if (!this.rootBlock) {
-      return { root: { type: 'root', children: [] }, images: [], files: [] }
+      return {
+        root: { type: 'root', children: [] },
+        images: [],
+        invalidTables: [],
+        files: [],
+      }
     }
 
     const locateBlockWithRecordId = async (

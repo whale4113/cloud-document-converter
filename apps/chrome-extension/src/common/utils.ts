@@ -1,3 +1,7 @@
+import { toHast } from 'mdast-util-to-hast'
+import { toHtml } from 'hast-util-to-html'
+import type { InvalidTable } from '@dolphin/lark'
+
 interface Ref<T> {
   current: T
 }
@@ -67,4 +71,32 @@ export class UniqueFileName {
 
     return newFileName
   }
+}
+
+export const transformInvalidTablesToHtml = (
+  invalidTables: InvalidTable[],
+): void => {
+  invalidTables.forEach(invalidTable => {
+    const invalidTableIndex = invalidTable.parent?.children.findIndex(
+      child => child === invalidTable.inner,
+    )
+    if (invalidTableIndex !== undefined && invalidTableIndex !== -1) {
+      invalidTable.parent?.children.splice(invalidTableIndex, 1, {
+        type: 'html',
+        value: toHtml(
+          toHast({
+            ...invalidTable.inner,
+            // @ts-expect-error non-phrasing content can be supported.
+            children: invalidTable.inner.children.map(row => ({
+              ...row,
+              children: row.children.map(cell => ({
+                ...cell,
+                children: cell.data?.invalidChildren ?? cell.children,
+              })),
+            })),
+          }),
+        ),
+      })
+    }
+  })
 }

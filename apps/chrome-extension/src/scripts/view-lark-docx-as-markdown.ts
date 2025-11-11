@@ -5,6 +5,12 @@ import { isDefined } from '@dolphin/common'
 import { CommonTranslationKey, en, Namespace, zh } from '../common/i18n'
 import { confirm } from '../common/notification'
 import { reportBug } from '../common/issue'
+import { transformInvalidTablesToHtml } from '../common/utils'
+import {
+  getSettings,
+  SettingKey,
+  TableWithNonPhrasingContent,
+} from '../common/settings'
 
 const enum TranslationKey {
   FAILED_TO_LOAD_IMAGES = 'failed_to_load_images',
@@ -61,7 +67,7 @@ const main = async () => {
     return
   }
 
-  const { root, images } = docx.intoMarkdownAST()
+  const { root, images, invalidTables } = docx.intoMarkdownAST()
 
   const tokens = images
     .map(image => {
@@ -76,6 +82,15 @@ const main = async () => {
       return [token, code]
     })
     .filter(isDefined)
+
+  const settings = await getSettings([SettingKey.TableWithNonPhrasingContent])
+
+  if (
+    settings[SettingKey.TableWithNonPhrasingContent] ===
+    TableWithNonPhrasingContent.ToHTML
+  ) {
+    transformInvalidTablesToHtml(invalidTables)
+  }
 
   const markdown = Docx.stringify(root)
 

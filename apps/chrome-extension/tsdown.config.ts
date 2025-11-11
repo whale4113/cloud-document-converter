@@ -1,4 +1,4 @@
-import { defineConfig, type Options } from 'tsdown'
+import { defineConfig, type UserConfig as Options } from 'tsdown'
 import babel from '@rollup/plugin-babel'
 import { glob } from 'glob'
 import regexpEscape from 'regexp.escape'
