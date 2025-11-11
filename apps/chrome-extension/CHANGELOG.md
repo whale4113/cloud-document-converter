@@ -1,5 +1,11 @@
 # @dolphin/chrome-extension
 
+## 1.10.2
+
+### Patch Changes
+
+- [#90](https://github.com/whale4113/cloud-document-converter/pull/90) [`9ccfb7d`](https://github.com/whale4113/cloud-document-converter/commit/9ccfb7dbe24f619932631eae327d4bf869be6a30) Thanks [@whale4113](https://github.com/whale4113)! - feat: transform tables with non-phrasing content to html
+
 ## 1.10.1
 
 ### Patch Changes
