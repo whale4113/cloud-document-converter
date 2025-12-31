@@ -894,7 +894,8 @@ export class Transformer {
             child.type === BlockType.HEADING6 ||
             child.type === BlockType.HEADING7 ||
             child.type === BlockType.HEADING8 ||
-            child.type === BlockType.HEADING9
+            child.type === BlockType.HEADING9 ||
+            child.type === BlockType.TEXT
           ) {
             return [child, ...flatChildren(child.children)]
           }
