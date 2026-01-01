@@ -101,6 +101,8 @@ interface Attributes {
   inlineCode?: string
   link?: string
   equation?: string
+  textHighlight?: string
+  textHighlightBackground?: string
   'inline-component'?: string
   [attrName: string]: unknown
 }
@@ -693,7 +695,8 @@ export const transformOperationsToPhrasingContents = (
     op: Operation,
   ): mdast.Text | mdast.InlineCode | InlineMath => {
     const { attributes, insert } = op
-    const { inlineCode, equation } = attributes ?? {}
+    const { inlineCode, equation, textHighlight, textHighlightBackground } =
+      attributes ?? {}
 
     if (inlineCode) {
       return {
@@ -706,6 +709,14 @@ export const transformOperationsToPhrasingContents = (
       return {
         type: 'inlineMath',
         value: trimEndEnter(equation),
+      }
+    }
+
+    // inlineCode and equation override text highlight and background
+    if (textHighlight || textHighlightBackground) {
+      return {
+        type: 'text',
+        value: `<span style="color: ${textHighlight ?? 'inherit'}; background-color: ${textHighlightBackground ?? 'inherit'}">${insert}</span>`,
       }
     }
 
@@ -1261,6 +1272,11 @@ export class Docx {
         }),
         ...(options?.extensions ?? []),
       ],
+      handlers: {
+        text(node: mdast.Text) {
+          return node.value
+        },
+      },
     })
   }
 

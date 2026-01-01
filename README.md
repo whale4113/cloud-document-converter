@@ -58,13 +58,13 @@ Install Cloud Document Converter from [Chrome Web Store](https://chromewebstore.
 | Italic       | ✅                | Italic       |
 | Inline code  | ✅                | Inline code  |
 | Link         | ✅                | Link         |
+| Font Color   | ✅                | <span>       |
+| Background Color   | ✅          | <span>       |
 | Underline    | To be determined |              |
 
 ## Other
 
 Indent and Align: To be determined
-
-Font color and background color: to be determined
 
 # Contribution
 
