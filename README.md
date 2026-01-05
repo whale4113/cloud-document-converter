@@ -56,10 +56,10 @@ Install Cloud Document Converter from [Chrome Web Store](https://chromewebstore.
 | Bold                  | ✅                | Bold         |
 | Delete                | ✅                | Delete       |
 | Italic                | ✅                | Italic       |
-| Inline code           | ✅                | Inline code  |
+| Inline code           | ✅                | Inline Code  |
 | Link                  | ✅                | Link         |
-| Font Color            | ✅                | Html         |
-| Font Background Color | ✅                | Html         |
+| Font Color            | ✅                | HTML         |
+| Font Background Color | ✅                | HTML         |
 | Underline             | To be determined |              |
 
 ## Other
