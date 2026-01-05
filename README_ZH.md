@@ -58,8 +58,8 @@ Cloud Document Converter 是一个浏览器扩展， 支持下载、复制飞书
 | 倾斜           | ✅            | Italic       |
 | 行内代码       | ✅            | Inline code  |
 | 链接           | ✅            | Link         |
-| 字体颜色        | ✅            | <span>       |
-| 字体背景色      | ✅            | <span>       |
+| 字体颜色       | ✅            | Html         |
+| 字体背景色     | ✅            | Html         |
 | 下划线         | 待定         |              |
 
 ## 其它

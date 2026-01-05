@@ -693,7 +693,7 @@ export const transformOperationsToPhrasingContents = (
 
   const createLiteral = (
     op: Operation,
-  ): mdast.Text | mdast.InlineCode | InlineMath => {
+  ): mdast.Text | mdast.InlineCode | InlineMath | mdast.Html => {
     const { attributes, insert } = op
     const { inlineCode, equation, textHighlight, textHighlightBackground } =
       attributes ?? {}
@@ -712,10 +712,9 @@ export const transformOperationsToPhrasingContents = (
       }
     }
 
-    // inlineCode and equation override text highlight and background
     if (textHighlight || textHighlightBackground) {
       return {
-        type: 'text',
+        type: 'html',
         value: `<span style="color: ${textHighlight ?? 'inherit'}; background-color: ${textHighlightBackground ?? 'inherit'}">${insert}</span>`,
       }
     }
@@ -1272,11 +1271,6 @@ export class Docx {
         }),
         ...(options?.extensions ?? []),
       ],
-      handlers: {
-        text(node: mdast.Text) {
-          return node.value
-        },
-      },
     })
   }
 
