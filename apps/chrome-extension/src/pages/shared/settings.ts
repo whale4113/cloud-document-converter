@@ -22,7 +22,8 @@ export const useSettings = <
     | SettingKey.Locale
     | SettingKey.Theme
     | SettingKey.DownloadMethod
-    | SettingKey.TableWithNonPhrasingContent,
+    | SettingKey.TableWithNonPhrasingContent
+    | SettingKey.TextHighlight,
 >(
   options: { keys?: Key[] } = {},
 ): {
@@ -40,6 +41,7 @@ export const useSettings = <
       SettingKey.Theme,
       SettingKey.DownloadMethod,
       SettingKey.TableWithNonPhrasingContent,
+      SettingKey.TextHighlight,
     ] as Key[],
   } = options
 

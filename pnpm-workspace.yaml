@@ -5,7 +5,7 @@ packages:
 catalogs:
   build:
     '@rollup/plugin-babel': ^6.0.4
-    rolldown-vite: 7.2.2
+    rolldown-vite: 7.3.0
     tsdown: 0.16.1
   cli:
     '@changesets/changelog-github': ^0.5.0

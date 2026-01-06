@@ -67,7 +67,14 @@ const main = async () => {
     return
   }
 
-  const { root, images, invalidTables } = docx.intoMarkdownAST()
+  const settings = await getSettings([
+    SettingKey.TableWithNonPhrasingContent,
+    SettingKey.TextHighlight,
+  ])
+
+  const { root, images, invalidTables } = docx.intoMarkdownAST({
+    highlight: settings[SettingKey.TextHighlight],
+  })
 
   const tokens = images
     .map(image => {
@@ -82,8 +89,6 @@ const main = async () => {
       return [token, code]
     })
     .filter(isDefined)
-
-  const settings = await getSettings([SettingKey.TableWithNonPhrasingContent])
 
   if (
     settings[SettingKey.TableWithNonPhrasingContent] ===

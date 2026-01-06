@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
-import { useForm } from 'vee-validate'
+import { useForm, Field as VeeField } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { z } from 'zod/v4'
 import { pick } from 'es-toolkit'
@@ -9,13 +9,12 @@ import { LoaderCircle } from 'lucide-vue-next'
 import { supported } from 'browser-fs-access'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+} from '@/components/ui/field'
 import {
   Select,
   SelectContent,
@@ -73,21 +72,33 @@ const downloadMethodDescription = computed(() => {
     </CardHeader>
     <CardContent class="space-y-6">
       <form class="w-2/3 space-y-6" @submit="onSubmit">
-        <FormField
-          v-slot="{ componentField }"
+        <VeeField
+          v-slot="{ field, errors }"
           :name="`[${SettingKey.DownloadMethod}]`"
         >
-          <FormItem>
-            <FormLabel>{{ t('download.method') }}</FormLabel>
+          <Field orientation="responsive" :data-invalid="!!errors.length">
+            <FieldContent>
+              <FieldLabel for="form-vee-download-method">{{
+                t('download.method')
+              }}</FieldLabel>
+              <FieldDescription>
+                {{ downloadMethodDescription }}
+              </FieldDescription>
+              <FieldError v-if="errors.length" :errors="errors" />
+            </FieldContent>
             <Skeleton v-if="query.isPending.value" class="h-9 w-40" />
-            <Select v-else v-bind="componentField">
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue
-                    :placeholder="t('download.method.placeholder')"
-                  />
-                </SelectTrigger>
-              </FormControl>
+            <Select
+              v-else
+              :name="field.name"
+              :model-value="field.value"
+              @update:model-value="field.onChange"
+            >
+              <SelectTrigger
+                id="form-vee-download-method"
+                :aria-invalid="!!errors.length"
+              >
+                <SelectValue :placeholder="t('download.method.placeholder')" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
                   <SelectItem :value="DownloadMethod.Direct"
@@ -101,13 +112,8 @@ const downloadMethodDescription = computed(() => {
                 </SelectGroup>
               </SelectContent>
             </Select>
-            <Skeleton v-if="query.isPending.value" class="h-9 w-60" />
-            <FormDescription v-else>
-              {{ downloadMethodDescription }}
-            </FormDescription>
-            <FormMessage />
-          </FormItem>
-        </FormField>
+          </Field>
+        </VeeField>
         <Button
           type="submit"
           class="relative"
