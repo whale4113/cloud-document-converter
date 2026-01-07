@@ -71,7 +71,7 @@ const downloadMethodDescription = computed(() => {
       </CardTitle>
     </CardHeader>
     <CardContent class="space-y-6">
-      <form class="w-2/3 space-y-6" @submit="onSubmit">
+      <form id="form-vee-download" class="w-2/3 space-y-6" @submit="onSubmit">
         <VeeField
           v-slot="{ field, errors }"
           :name="`[${SettingKey.DownloadMethod}]`"
