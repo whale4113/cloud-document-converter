@@ -838,9 +838,9 @@ type Mutate<T extends Block> = T extends PageBlock
             ? mdast.ListItem
             : T extends TextBlock
               ? mdast.Text
-              : T extends TableBlock
+              : T extends TableBlock | Grid
                 ? mdast.Table
-                : T extends TableCellBlock
+                : T extends TableCellBlock | GridColumn
                   ? mdast.TableCell
                   : T extends Whiteboard | DiagramBlock
                     ? mdast.Image
@@ -940,9 +940,7 @@ export class Transformer {
       children
         .map(child => {
           if (child.type === BlockType.GRID) {
-            return flatChildren(
-              child.children.map(column => column.children).flat(1),
-            )
+            return [child]
           }
 
           if (
@@ -1216,6 +1214,71 @@ export class Transformer {
         this.images.push(image)
 
         return this.normalizeImage(image)
+      }
+      case BlockType.GRID: {
+        const table: mdast.Table = { type: 'table', children: [] }
+        const rows: mdast.TableRow[] = []
+
+        const colCount = block.children.length // grid_column
+
+        const headers: mdast.TableCell[] = []
+        for (let colIndex = 0; colIndex < colCount; colIndex++) {
+          const header: mdast.TableCell = { type: 'tableCell', children: [] }
+          headers.push(header)
+        }
+        rows.push({ type: 'tableRow', children: headers })
+
+        const cells: mdast.TableCell[] = []
+        for (let colIndex = 0; colIndex < colCount; colIndex++) {
+          const grid_column = block.children[colIndex]
+
+          const cell: mdast.TableCell = { type: 'tableCell', children: [] }
+
+          const transformedCell = this.transformParentBlock(
+            grid_column,
+            () => cell,
+            nodes => {
+              const normalizedNodes = mergeListItems(nodes)
+                .map((node, i, arr) => {
+                  const children =
+                    node.type === 'paragraph' ? node.children : [node]
+                  return i === arr.length - 1
+                    ? children
+                    : [
+                        ...children,
+                        { type: 'html', value: '<br />' } as mdast.Html,
+                      ]
+                })
+                .flat(1)
+
+              if (normalizedNodes.every(isPhrasingContent)) {
+                return normalizedNodes
+              }
+
+              cell.data = {
+                invalidChildren: normalizedNodes.filter(
+                  node => !isPhrasingContent(node),
+                ),
+              }
+
+              return normalizedNodes.filter(isPhrasingContent)
+            },
+          )
+
+          cells.push(transformedCell)
+        }
+
+        rows.push({ type: 'tableRow', children: cells })
+
+        table.children = rows
+
+        table.data = {
+          invalid: table.children.some(row =>
+            row.children.some(cell => cell.data?.invalidChildren),
+          ),
+        }
+
+        return table
       }
       case BlockType.TABLE: {
         let table: mdast.Table = { type: 'table', children: [] }
