@@ -101,6 +101,8 @@ interface Attributes {
   inlineCode?: string
   link?: string
   equation?: string
+  textHighlight?: string
+  textHighlightBackground?: string
   'inline-component'?: string
   [attrName: string]: unknown
 }
@@ -584,8 +586,13 @@ export const mergePhrasingContents = (
     return node
   })
 
+export interface transformOperationsToPhrasingContentsOptions {
+  highlight?: boolean
+}
+
 export const transformOperationsToPhrasingContents = (
   ops: Operation[],
+  options: transformOperationsToPhrasingContentsOptions = {},
 ): mdast.PhrasingContent[] => {
   const operations = ops
     .filter(operation => {
@@ -691,9 +698,10 @@ export const transformOperationsToPhrasingContents = (
 
   const createLiteral = (
     op: Operation,
-  ): mdast.Text | mdast.InlineCode | InlineMath => {
+  ): mdast.Text | mdast.InlineCode | InlineMath | mdast.Html => {
     const { attributes, insert } = op
-    const { inlineCode, equation } = attributes ?? {}
+    const { inlineCode, equation, textHighlight, textHighlightBackground } =
+      attributes ?? {}
 
     if (inlineCode) {
       return {
@@ -706,6 +714,13 @@ export const transformOperationsToPhrasingContents = (
       return {
         type: 'inlineMath',
         value: trimEndEnter(equation),
+      }
+    }
+
+    if (options.highlight && (textHighlight || textHighlightBackground)) {
+      return {
+        type: 'html',
+        value: `<span style="color: ${textHighlight ?? 'inherit'}; background-color: ${textHighlightBackground ?? 'inherit'}">${insert}</span>`,
       }
     }
 
@@ -821,6 +836,11 @@ interface TransformerOptions {
    */
   file?: boolean
   /**
+   * Enable convert text highlight to html.
+   * @default false
+   */
+  highlight?: boolean
+  /**
    * Locate block with record id.
    */
   locateBlockWithRecordId?: (recordId: string) => Promise<boolean>
@@ -852,7 +872,11 @@ export class Transformer {
   private sequences: (string | undefined)[] = []
 
   constructor(
-    public options: TransformerOptions = { whiteboard: false, file: false },
+    public options: TransformerOptions = {
+      whiteboard: false,
+      file: false,
+      highlight: false,
+    },
   ) {}
 
   private normalizeImage(image: mdast.Image): mdast.Image | mdast.Paragraph {
@@ -948,6 +972,7 @@ export class Transformer {
           depth,
           children: transformOperationsToPhrasingContents(
             block.zoneState?.content.ops ?? [],
+            { highlight: this.options.highlight },
           ),
         }
 
@@ -1004,6 +1029,7 @@ export class Transformer {
           type: 'paragraph',
           children: transformOperationsToPhrasingContents(
             block.zoneState?.content.ops ?? [],
+            { highlight: this.options.highlight },
           ),
         }
         return this.transformParentBlock(
@@ -1038,6 +1064,7 @@ export class Transformer {
           type: 'paragraph',
           children: transformOperationsToPhrasingContents(
             block.zoneState?.content.ops ?? [],
+            { highlight: this.options.highlight },
           ),
         }
         return paragraph

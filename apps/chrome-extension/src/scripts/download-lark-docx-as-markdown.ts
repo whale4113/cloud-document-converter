@@ -495,9 +495,16 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
     throw new Error(DOWNLOAD_ABORTED)
   }
 
+  const settings = await getSettings([
+    SettingKey.DownloadMethod,
+    SettingKey.TableWithNonPhrasingContent,
+    SettingKey.TextHighlight,
+  ])
+
   const { root, images, files, invalidTables } = docx.intoMarkdownAST({
     whiteboard: true,
     file: true,
+    highlight: settings[SettingKey.TextHighlight],
   })
 
   const recommendName = docx.pageTitle
@@ -506,11 +513,6 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
   const isZip = images.length > 0 || files.length > 0
   const ext = isZip ? '.zip' : '.md'
   const filename = `${recommendName}${ext}`
-
-  const settings = await getSettings([
-    SettingKey.DownloadMethod,
-    SettingKey.TableWithNonPhrasingContent,
-  ])
 
   const toBlob = async () => {
     Toast.loading({

@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import { watch, watchEffect } from 'vue'
-import { useForm } from 'vee-validate'
+import { useForm, Field as VeeField } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { z } from 'zod/v4'
 import { pick } from 'es-toolkit'
 import { LoaderCircle } from 'lucide-vue-next'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Switch } from '@/components/ui/switch'
 import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
+  Field,
+  FieldContent,
+  FieldError,
+  FieldLabel,
+} from '@/components/ui/field'
 import {
   Select,
   SelectContent,
@@ -37,6 +37,7 @@ const schema = z.object({
   [SettingKey.Locale]: z.enum(availableLocales.value),
   [SettingKey.Theme]: z.enum(Theme),
   [SettingKey.TableWithNonPhrasingContent]: z.enum(TableWithNonPhrasingContent),
+  [SettingKey.TextHighlight]: z.boolean(),
 })
 
 const { query, mutation } = useSettings()
@@ -53,6 +54,7 @@ watch(query.data, newValues => {
         SettingKey.Locale,
         SettingKey.Theme,
         SettingKey.TableWithNonPhrasingContent,
+        SettingKey.TextHighlight,
       ]),
     })
 
@@ -74,19 +76,28 @@ const onSubmit = handleSubmit.withControlled(async values => {
       </CardTitle>
     </CardHeader>
     <CardContent class="space-y-6">
-      <form class="w-2/3 space-y-6" @submit="onSubmit">
-        <FormField v-slot="{ componentField }" :name="`[${SettingKey.Locale}]`">
-          <FormItem>
-            <FormLabel>{{ t('general.language') }}</FormLabel>
+      <form id="form-vee-general" class="w-2/3 space-y-6" @submit="onSubmit">
+        <VeeField v-slot="{ field, errors }" :name="`[${SettingKey.Locale}]`">
+          <Field orientation="responsive" :data-invalid="!!errors.length">
+            <FieldContent>
+              <FieldLabel for="form-vee-general-locale">{{
+                t('general.language')
+              }}</FieldLabel>
+              <FieldError v-if="errors.length" :errors="errors" />
+            </FieldContent>
             <Skeleton v-if="query.isPending.value" class="h-9 w-40" />
-            <Select v-else v-bind="componentField">
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue
-                    :placeholder="t('general.language.placeholder')"
-                  />
-                </SelectTrigger>
-              </FormControl>
+            <Select
+              v-else
+              :name="field.name"
+              :model-value="field.value"
+              @update:model-value="field.onChange"
+            >
+              <SelectTrigger
+                id="form-vee-general-locale"
+                :aria-invalid="!!errors.length"
+              >
+                <SelectValue :placeholder="t('general.language.placeholder')" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
                   <SelectItem
@@ -98,19 +109,28 @@ const onSubmit = handleSubmit.withControlled(async values => {
                 </SelectGroup>
               </SelectContent>
             </Select>
-            <FormMessage />
-          </FormItem>
-        </FormField>
-        <FormField v-slot="{ componentField }" :name="`[${SettingKey.Theme}]`">
-          <FormItem>
-            <FormLabel>{{ t('general.theme') }}</FormLabel>
+          </Field>
+        </VeeField>
+        <VeeField v-slot="{ field, errors }" :name="`[${SettingKey.Theme}]`">
+          <Field orientation="responsive" :data-invalid="!!errors.length">
+            <FieldContent>
+              <FieldLabel for="form-vee-general-theme">{{
+                t('general.theme')
+              }}</FieldLabel>
+              <FieldError v-if="errors.length" :errors="errors" />
+            </FieldContent>
             <Skeleton v-if="query.isPending.value" class="h-9 w-40" />
-            <Select v-else v-bind="componentField">
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue :placeholder="t('general.theme.placeholder')" />
-                </SelectTrigger>
-              </FormControl>
+            <Select
+              v-else
+              :model-value="field.value"
+              @update:model-value="field.onChange"
+            >
+              <SelectTrigger
+                id="form-vee-general-theme"
+                :aria-invalid="!!errors.length"
+              >
+                <SelectValue :placeholder="t('general.theme.placeholder')" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
                   <SelectItem
@@ -131,28 +151,36 @@ const onSubmit = handleSubmit.withControlled(async values => {
                 </SelectGroup>
               </SelectContent>
             </Select>
-            <FormMessage />
-          </FormItem>
-        </FormField>
-        <FormField
-          v-slot="{ componentField }"
+          </Field>
+        </VeeField>
+        <VeeField
+          v-slot="{ field, errors }"
           :name="`[${SettingKey.TableWithNonPhrasingContent}]`"
         >
-          <FormItem>
-            <FormLabel>{{
-              t('general.table_with_non_phrasing_content')
-            }}</FormLabel>
+          <Field orientation="responsive" :data-invalid="!!errors.length">
+            <FieldContent>
+              <FieldLabel
+                for="form-vee-general-table-with-non-phrasing-content"
+                >{{ t('general.table_with_non_phrasing_content') }}</FieldLabel
+              >
+              <FieldError v-if="errors.length" :errors="errors" />
+            </FieldContent>
             <Skeleton v-if="query.isPending.value" class="h-9 w-40" />
-            <Select v-else v-bind="componentField">
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue
-                    :placeholder="
-                      t('general.table_with_non_phrasing_content.placeholder')
-                    "
-                  />
-                </SelectTrigger>
-              </FormControl>
+            <Select
+              v-else
+              :model-value="field.value"
+              @update:model-value="field.onChange"
+            >
+              <SelectTrigger
+                id="form-vee-general-table-with-non-phrasing-content"
+                :aria-invalid="!!errors.length"
+              >
+                <SelectValue
+                  :placeholder="
+                    t('general.table_with_non_phrasing_content.placeholder')
+                  "
+                />
+              </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
                   <SelectItem
@@ -168,9 +196,30 @@ const onSubmit = handleSubmit.withControlled(async values => {
                 </SelectGroup>
               </SelectContent>
             </Select>
-            <FormMessage />
-          </FormItem>
-        </FormField>
+          </Field>
+        </VeeField>
+        <VeeField
+          v-slot="{ field, errors }"
+          :name="`[${SettingKey.TextHighlight}]`"
+        >
+          <Field orientation="horizontal" :data-invalid="!!errors.length">
+            <FieldContent>
+              <FieldLabel for="form-vee-general-text-highlight">{{
+                t('general.text_highlight')
+              }}</FieldLabel>
+              <FieldError v-if="errors.length" :errors="errors" />
+            </FieldContent>
+            <Skeleton v-if="query.isPending.value" class="h-9 w-40" />
+            <Switch
+              v-else
+              id="form-vee-general-text-highlight"
+              :name="field.name"
+              :model-value="field.value"
+              :aria-invalid="!!errors.length"
+              @update:model-value="field.onChange"
+            />
+          </Field>
+        </VeeField>
         <Button
           type="submit"
           class="relative"

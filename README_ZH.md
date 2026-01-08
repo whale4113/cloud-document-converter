@@ -56,15 +56,15 @@ Cloud Document Converter 是一个浏览器扩展， 支持下载、复制飞书
 | 加粗           | ✅            | Bold         |
 | 删除线         | ✅            | Delete       |
 | 倾斜           | ✅            | Italic       |
-| 行内代码       | ✅            | Inline code  |
+| 行内代码       | ✅            | Inline Code  |
 | 链接           | ✅            | Link         |
+| 字体颜色       | ✅            | HTML         |
+| 字体背景色     | ✅            | HTML         |
 | 下划线         | 待定         |              |
 
 ## 其它
 
 - 缩进和对齐：待定
-
-- 字体颜色和背景色：待定
 
 # 贡献
 

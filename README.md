@@ -51,20 +51,20 @@ Install Cloud Document Converter from [Chrome Web Store](https://chromewebstore.
 
 ## Inline
 
-| **Lark Doc** | **Support**      | **Markdown** |
-| ------------ | ---------------- | ------------ |
-| Bold         | ✅                | Bold         |
-| Delete       | ✅                | Delete       |
-| Italic       | ✅                | Italic       |
-| Inline code  | ✅                | Inline code  |
-| Link         | ✅                | Link         |
-| Underline    | To be determined |              |
+| **Lark Doc**          | **Support**      | **Markdown** |
+| --------------------- | ---------------- | ------------ |
+| Bold                  | ✅                | Bold         |
+| Delete                | ✅                | Delete       |
+| Italic                | ✅                | Italic       |
+| Inline code           | ✅                | Inline Code  |
+| Link                  | ✅                | Link         |
+| Font Color            | ✅                | HTML         |
+| Font Background Color | ✅                | HTML         |
+| Underline             | To be determined |              |
 
 ## Other
 
 Indent and Align: To be determined
-
-Font color and background color: to be determined
 
 # Contribution
 
