@@ -1,6 +1,7 @@
 import type * as mdast from 'mdast'
 import chunk from 'lodash-es/chunk'
 import {
+  svgToBlob,
   imageDataToBlob,
   compare,
   isDefined,
@@ -308,6 +309,22 @@ interface Whiteboard extends Block {
   }
 }
 
+interface BlockView {
+  getSvg: () => SVGElement | null
+}
+
+interface BlockManager {
+  getBlockViewByBlockId: (blockId: number) => BlockView | null
+}
+
+interface DiagramBlock extends Block {
+  type: BlockType.DIAGRAM
+  blockManager?: BlockManager
+  snapshot: {
+    type: BlockType.DIAGRAM
+  }
+}
+
 interface View extends Block<File> {
   type: BlockType.VIEW
 }
@@ -376,7 +393,6 @@ interface NotSupportedBlock extends Block {
     | BlockType.QUOTE
     | BlockType.BITABLE
     | BlockType.CHAT_CARD
-    | BlockType.DIAGRAM
     | BlockType.MINDNOTE
     | BlockType.SHEET
     | BlockType.FALLBACK
@@ -401,6 +417,7 @@ type Blocks =
   | Callout
   | SyncedSource
   | Whiteboard
+  | DiagramBlock
   | View
   | File
   | IframeBlock
@@ -791,6 +808,18 @@ const whiteboardToImageData = async (
   return imageData
 }
 
+const diagramToSVGElement = (diagram: DiagramBlock): SVGElement | null => {
+  if (!diagram.blockManager) return null
+
+  const blockView = diagram.blockManager.getBlockViewByBlockId(diagram.id)
+  if (!blockView) return null
+
+  const svgElement = blockView.getSvg()
+  if (!svgElement) return null
+
+  return svgElement
+}
+
 const evaluateAlt = (caption?: Caption) =>
   trimEndEnter(caption?.text.initialAttributedTexts.text?.[0] ?? '')
 
@@ -812,7 +841,7 @@ type Mutate<T extends Block> = T extends PageBlock
                 ? mdast.Table
                 : T extends TableCellBlock
                   ? mdast.TableCell
-                  : T extends Whiteboard
+                  : T extends Whiteboard | DiagramBlock
                     ? mdast.Image
                     : T extends View
                       ? mdast.Paragraph
@@ -830,6 +859,11 @@ interface TransformerOptions {
    * @default false
    */
   whiteboard?: boolean
+  /**
+   * Enable convert diagram to image.
+   * @default false
+   */
+  diagram?: boolean
   /**
    * Enable convert file to resource link.
    * @default false
@@ -874,6 +908,7 @@ export class Transformer {
   constructor(
     public options: TransformerOptions = {
       whiteboard: false,
+      diagram: false,
       file: false,
       highlight: false,
     },
@@ -1133,6 +1168,49 @@ export class Transformer {
         }
 
         const image: mdast.Image = whiteboardToImage(block)
+
+        this.images.push(image)
+
+        return this.normalizeImage(image)
+      }
+      case BlockType.DIAGRAM: {
+        if (!this.options.diagram) return null
+
+        const diagramToImage = (diagram: DiagramBlock): mdast.Image => {
+          const image: mdast.Image = {
+            type: 'image',
+            url: '',
+            data: {
+              fetchBlob: async () => {
+                try {
+                  const {
+                    locateBlockWithRecordId = () => Promise.resolve(false),
+                  } = this.options
+
+                  await waitForFunction(
+                    () =>
+                      locateBlockWithRecordId(diagram.record?.id ?? '').then(
+                        isSuccess => isSuccess,
+                      ),
+                    {
+                      timeout: 3 * Second,
+                    },
+                  )
+                } catch (error) {
+                  console.error(error)
+                }
+
+                const svgElement = diagramToSVGElement(diagram)
+                if (!svgElement) return null
+
+                return await svgToBlob(svgElement)
+              },
+            },
+          }
+          return image
+        }
+
+        const image: mdast.Image = diagramToImage(block)
 
         this.images.push(image)
 
