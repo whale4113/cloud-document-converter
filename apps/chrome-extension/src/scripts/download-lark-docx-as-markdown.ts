@@ -540,6 +540,7 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
 
   const { root, images, files, invalidTables } = docx.intoMarkdownAST({
     whiteboard: true,
+    diagram: true,
     file: true,
     highlight: settings[SettingKey.TextHighlight],
   })
