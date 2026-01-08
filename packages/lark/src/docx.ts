@@ -119,6 +119,7 @@ interface BlockZoneState {
   content: {
     ops: Operation[]
   }
+  _node: HTMLElement
 }
 
 interface BlockSnapshot {
@@ -203,6 +204,10 @@ interface TodoBlock extends Block {
 }
 
 interface TextBlock extends Block {
+  type: BlockType.TEXT
+}
+
+interface MentionBlock extends Block<TextBlock> {
   type: BlockType.TEXT
 }
 
@@ -410,6 +415,7 @@ type Blocks =
   | OrderedBlock
   | TodoBlock
   | TextBlock
+  | MentionBlock
   | ImageBlock
   | TableBlock
   | TableCellBlock
@@ -637,6 +643,7 @@ export const transformOperationsToPhrasingContents = (
             data: {
               raw_url: string
               title: string
+              uid: string
             }
           }
           if (inlineComponent.type === 'mention_doc') {
@@ -647,6 +654,19 @@ export const transformOperationsToPhrasingContents = (
               },
               insert: op.insert + inlineComponent.data.title,
             } as Operation
+          } else if (inlineComponent.type === 'user') {
+            const el: HTMLElement | null = window.document.querySelector(
+              `a[data-token="${inlineComponent.data.uid}"]`,
+            )
+            const text: string = '@' + (el?.innerText ?? '')
+
+            return {
+              attributes: {
+                inlineCode: true,
+                ...op.attributes,
+              },
+              insert: text,
+            }
           }
 
           return op
@@ -836,7 +856,7 @@ type Mutate<T extends Block> = T extends PageBlock
           ? mdast.Blockquote
           : T extends BulletBlock | OrderedBlock | TodoBlock
             ? mdast.ListItem
-            : T extends TextBlock
+            : T extends TextBlock | MentionBlock
               ? mdast.Text
               : T extends TableBlock | Grid
                 ? mdast.Table
