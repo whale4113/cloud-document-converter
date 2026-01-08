@@ -1,6 +1,7 @@
 import type * as mdast from 'mdast'
 import chunk from 'lodash-es/chunk'
 import {
+  svgToBlob,
   imageDataToBlob,
   compare,
   isDefined,
@@ -117,6 +118,7 @@ interface BlockZoneState {
   content: {
     ops: Operation[]
   }
+  _node: HTMLElement
 }
 
 interface BlockSnapshot {
@@ -201,6 +203,10 @@ interface TodoBlock extends Block {
 }
 
 interface TextBlock extends Block {
+  type: BlockType.TEXT
+}
+
+interface MentionBlock extends Block<TextBlock> {
   type: BlockType.TEXT
 }
 
@@ -308,6 +314,22 @@ interface Whiteboard extends Block {
   }
 }
 
+interface BlockView {
+  getSvg: () => SVGElement | null
+}
+
+interface BlockManager {
+  getBlockViewByBlockId: (blockId: number) => BlockView | null
+}
+
+interface DiagramBlock extends Block {
+  type: BlockType.DIAGRAM
+  blockManager?: BlockManager
+  snapshot: {
+    type: BlockType.DIAGRAM
+  }
+}
+
 interface View extends Block<File> {
   type: BlockType.VIEW
 }
@@ -376,7 +398,6 @@ interface NotSupportedBlock extends Block {
     | BlockType.QUOTE
     | BlockType.BITABLE
     | BlockType.CHAT_CARD
-    | BlockType.DIAGRAM
     | BlockType.MINDNOTE
     | BlockType.SHEET
     | BlockType.FALLBACK
@@ -393,6 +414,7 @@ type Blocks =
   | OrderedBlock
   | TodoBlock
   | TextBlock
+  | MentionBlock
   | ImageBlock
   | TableBlock
   | TableCellBlock
@@ -401,6 +423,7 @@ type Blocks =
   | Callout
   | SyncedSource
   | Whiteboard
+  | DiagramBlock
   | View
   | File
   | IframeBlock
@@ -619,6 +642,7 @@ export const transformOperationsToPhrasingContents = (
             data: {
               raw_url: string
               title: string
+              uid: string
             }
           }
           if (inlineComponent.type === 'mention_doc') {
@@ -629,6 +653,19 @@ export const transformOperationsToPhrasingContents = (
               },
               insert: op.insert + inlineComponent.data.title,
             } as Operation
+          } else if (inlineComponent.type === 'user') {
+            const el: HTMLElement | null = window.document.querySelector(
+              `a[data-token="${inlineComponent.data.uid}"]`,
+            )
+            const text: string = '@' + (el?.innerText ?? '')
+
+            return {
+              attributes: {
+                inlineCode: true,
+                ...op.attributes,
+              },
+              insert: text,
+            }
           }
 
           return op
@@ -791,6 +828,18 @@ const whiteboardToImageData = async (
   return imageData
 }
 
+const diagramToSVGElement = (diagram: DiagramBlock): SVGElement | null => {
+  if (!diagram.blockManager) return null
+
+  const blockView = diagram.blockManager.getBlockViewByBlockId(diagram.id)
+  if (!blockView) return null
+
+  const svgElement = blockView.getSvg()
+  if (!svgElement) return null
+
+  return svgElement
+}
+
 const evaluateAlt = (caption?: Caption) =>
   trimEndEnter(caption?.text.initialAttributedTexts.text?.[0] ?? '')
 
@@ -806,13 +855,13 @@ type Mutate<T extends Block> = T extends PageBlock
           ? mdast.Blockquote
           : T extends BulletBlock | OrderedBlock | TodoBlock
             ? mdast.ListItem
-            : T extends TextBlock
+            : T extends TextBlock | MentionBlock
               ? mdast.Text
-              : T extends TableBlock
+              : T extends TableBlock | Grid
                 ? mdast.Table
-                : T extends TableCellBlock
+                : T extends TableCellBlock | GridColumn
                   ? mdast.TableCell
-                  : T extends Whiteboard
+                  : T extends Whiteboard | DiagramBlock
                     ? mdast.Image
                     : T extends View
                       ? mdast.Paragraph
@@ -830,6 +879,11 @@ interface TransformerOptions {
    * @default false
    */
   whiteboard?: boolean
+  /**
+   * Enable convert diagram to image.
+   * @default false
+   */
+  diagram?: boolean
   /**
    * Enable convert file to resource link.
    * @default false
@@ -874,6 +928,7 @@ export class Transformer {
   constructor(
     public options: TransformerOptions = {
       whiteboard: false,
+      diagram: false,
       file: false,
       highlight: false,
     },
@@ -904,9 +959,7 @@ export class Transformer {
       children
         .map(child => {
           if (child.type === BlockType.GRID) {
-            return flatChildren(
-              child.children.map(column => column.children).flat(1),
-            )
+            return [child]
           }
 
           if (
@@ -1138,6 +1191,114 @@ export class Transformer {
 
         return this.normalizeImage(image)
       }
+      case BlockType.DIAGRAM: {
+        if (!this.options.diagram) return null
+
+        const diagramToImage = (diagram: DiagramBlock): mdast.Image => {
+          const image: mdast.Image = {
+            type: 'image',
+            url: '',
+            data: {
+              fetchBlob: async () => {
+                try {
+                  const {
+                    locateBlockWithRecordId = () => Promise.resolve(false),
+                  } = this.options
+
+                  await waitForFunction(
+                    () =>
+                      locateBlockWithRecordId(diagram.record?.id ?? '').then(
+                        isSuccess => isSuccess,
+                      ),
+                    {
+                      timeout: 3 * Second,
+                    },
+                  )
+                } catch (error) {
+                  console.error(error)
+                }
+
+                const svgElement = diagramToSVGElement(diagram)
+                if (!svgElement) return null
+
+                return await svgToBlob(svgElement)
+              },
+            },
+          }
+          return image
+        }
+
+        const image: mdast.Image = diagramToImage(block)
+
+        this.images.push(image)
+
+        return this.normalizeImage(image)
+      }
+      case BlockType.GRID: {
+        const table: mdast.Table = { type: 'table', children: [] }
+        const rows: mdast.TableRow[] = []
+
+        const colCount = block.children.length // grid_column
+
+        const headers: mdast.TableCell[] = []
+        for (let colIndex = 0; colIndex < colCount; colIndex++) {
+          const header: mdast.TableCell = { type: 'tableCell', children: [] }
+          headers.push(header)
+        }
+        rows.push({ type: 'tableRow', children: headers })
+
+        const cells: mdast.TableCell[] = []
+        for (let colIndex = 0; colIndex < colCount; colIndex++) {
+          const grid_column = block.children[colIndex]
+
+          const cell: mdast.TableCell = { type: 'tableCell', children: [] }
+
+          const transformedCell = this.transformParentBlock(
+            grid_column,
+            () => cell,
+            nodes => {
+              const normalizedNodes = mergeListItems(nodes)
+                .map((node, i, arr) => {
+                  const children =
+                    node.type === 'paragraph' ? node.children : [node]
+                  return i === arr.length - 1
+                    ? children
+                    : [
+                        ...children,
+                        { type: 'html', value: '<br />' } as mdast.Html,
+                      ]
+                })
+                .flat(1)
+
+              if (normalizedNodes.every(isPhrasingContent)) {
+                return normalizedNodes
+              }
+
+              cell.data = {
+                invalidChildren: normalizedNodes.filter(
+                  node => !isPhrasingContent(node),
+                ),
+              }
+
+              return normalizedNodes.filter(isPhrasingContent)
+            },
+          )
+
+          cells.push(transformedCell)
+        }
+
+        rows.push({ type: 'tableRow', children: cells })
+
+        table.children = rows
+
+        table.data = {
+          invalid: table.children.some(row =>
+            row.children.some(cell => cell.data?.invalidChildren),
+          ),
+        }
+
+        return table
+      }
       case BlockType.TABLE: {
         let table: mdast.Table = { type: 'table', children: [] }
 
@@ -1176,9 +1337,28 @@ export class Transformer {
           block,
           () => cell,
           nodes => {
-            const normalizedNodes = mergeListItems(nodes)
-              .map(node => (node.type === 'paragraph' ? node.children : node))
-              .flat(1)
+            const mergedNodes = mergeListItems(nodes)
+            const normalizedNodes: mdast.Nodes[] = []
+
+            for (let i = 0; i < mergedNodes.length; i++) {
+              const node = mergedNodes[i]
+              const nextNode = mergedNodes[i + 1]
+
+              if (node.type === 'paragraph') {
+                normalizedNodes.push(...node.children)
+              } else {
+                normalizedNodes.push(node as mdast.PhrasingContent)
+              }
+
+              if (
+                // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+                nextNode &&
+                node.type === 'paragraph' &&
+                nextNode.type === 'paragraph'
+              ) {
+                normalizedNodes.push({ type: 'html', value: '<br />' })
+              }
+            }
 
             if (normalizedNodes.every(isPhrasingContent)) {
               return normalizedNodes
