@@ -1318,9 +1318,28 @@ export class Transformer {
           block,
           () => cell,
           nodes => {
-            const normalizedNodes = mergeListItems(nodes)
-              .map(node => (node.type === 'paragraph' ? node.children : node))
-              .flat(1)
+            const mergedNodes = mergeListItems(nodes)
+            const normalizedNodes: mdast.Nodes[] = []
+
+            for (let i = 0; i < mergedNodes.length; i++) {
+              const node = mergedNodes[i]
+              const nextNode = mergedNodes[i + 1]
+
+              if (node.type === 'paragraph') {
+                normalizedNodes.push(...node.children)
+              } else {
+                normalizedNodes.push(node as mdast.PhrasingContent)
+              }
+
+              if (
+                // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+                nextNode &&
+                node.type === 'paragraph' &&
+                nextNode.type === 'paragraph'
+              ) {
+                normalizedNodes.push({ type: 'html', value: '<br />' })
+              }
+            }
 
             if (normalizedNodes.every(isPhrasingContent)) {
               return normalizedNodes
