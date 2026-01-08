@@ -75,6 +75,7 @@ export class UniqueFileName {
 
 export const transformInvalidTablesToHtml = (
   invalidTables: InvalidTable[],
+  options: { allowDangerousHtml: boolean } = { allowDangerousHtml: false },
 ): void => {
   invalidTables.forEach(invalidTable => {
     const invalidTableIndex = invalidTable.parent?.children.findIndex(
@@ -84,17 +85,25 @@ export const transformInvalidTablesToHtml = (
       invalidTable.parent?.children.splice(invalidTableIndex, 1, {
         type: 'html',
         value: toHtml(
-          toHast({
-            ...invalidTable.inner,
-            // @ts-expect-error non-phrasing content can be supported.
-            children: invalidTable.inner.children.map(row => ({
-              ...row,
-              children: row.children.map(cell => ({
-                ...cell,
-                children: cell.data?.invalidChildren ?? cell.children,
+          toHast(
+            {
+              ...invalidTable.inner,
+              // @ts-expect-error non-phrasing content can be supported.
+              children: invalidTable.inner.children.map(row => ({
+                ...row,
+                children: row.children.map(cell => ({
+                  ...cell,
+                  children: cell.data?.invalidChildren ?? cell.children,
+                })),
               })),
-            })),
-          }),
+            },
+            {
+              allowDangerousHtml: options.allowDangerousHtml,
+            },
+          ),
+          {
+            allowDangerousHtml: options.allowDangerousHtml,
+          },
         ),
       })
     }

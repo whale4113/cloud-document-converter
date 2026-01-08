@@ -526,7 +526,9 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
         settings[SettingKey.TableWithNonPhrasingContent] ===
         TableWithNonPhrasingContent.ToHTML
       ) {
-        transformInvalidTablesToHtml(invalidTables)
+        transformInvalidTablesToHtml(invalidTables, {
+          allowDangerousHtml: settings[SettingKey.TextHighlight],
+        })
       }
 
       const markdown = Docx.stringify(root)
@@ -588,7 +590,9 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
         settings[SettingKey.TableWithNonPhrasingContent] ===
         TableWithNonPhrasingContent.ToHTML
       ) {
-        transformInvalidTablesToHtml(invalidTables)
+        transformInvalidTablesToHtml(invalidTables, {
+          allowDangerousHtml: settings[SettingKey.TextHighlight],
+        })
       }
 
       const markdown = Docx.stringify(root)
