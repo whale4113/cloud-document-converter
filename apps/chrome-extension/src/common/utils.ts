@@ -1,6 +1,7 @@
 import { toHast } from 'mdast-util-to-hast'
 import { toHtml } from 'hast-util-to-html'
 import type { InvalidTable } from '@dolphin/lark'
+import { v4 as uuidv4 } from 'uuid'
 
 interface Ref<T> {
   current: T
@@ -70,6 +71,26 @@ export class UniqueFileName {
     this.usedNames.add(newFileName)
 
     return newFileName
+  }
+
+  generateWithUUID(originFileName: string): string {
+    const startDotIndex = originFileName.lastIndexOf('.')
+    const extension =
+      startDotIndex === -1 ? '' : originFileName.slice(startDotIndex)
+    const uuid = uuidv4()
+    const newFileName = `${uuid}${extension}`
+
+    // Ensure UUID-based names are also unique
+    let finalFileName = newFileName
+    let counter = 1
+    while (this.usedNames.has(finalFileName)) {
+      finalFileName = `${uuid}-${counter.toFixed()}${extension}`
+      counter++
+    }
+
+    this.usedNames.add(finalFileName)
+
+    return finalFileName
   }
 }
 

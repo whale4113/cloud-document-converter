@@ -30,6 +30,8 @@ export const i18n = createI18n({
       'general.table_with_non_phrasing_content.to_html': 'To HTML',
       'general.text_highlight':
         'Preserve text highlighting (font color, font background color)',
+      'download.file_with_unique_name':
+        'Use UUID for image and diagram filenames',
       'download.method': 'Download Method',
       'download.method.placeholder': 'Select download method',
       'download.method.direct': 'Direct Download',
@@ -64,6 +66,7 @@ export const i18n = createI18n({
       'general.table_with_non_phrasing_content.filtered': '过滤块级内容',
       'general.table_with_non_phrasing_content.to_html': '转换为 HTML',
       'general.text_highlight': '保留文本高亮（字体颜色、字体背景颜色）',
+      'download.file_with_unique_name': '图片和图表文件使用 UUID 命名',
       'download.method': '下载方式',
       'download.method.placeholder': '选择下载方式',
       'download.method.direct': '直接下载',
