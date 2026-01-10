@@ -23,7 +23,8 @@ export const useSettings = <
     | SettingKey.Theme
     | SettingKey.DownloadMethod
     | SettingKey.TableWithNonPhrasingContent
-    | SettingKey.TextHighlight,
+    | SettingKey.TextHighlight
+    | SettingKey.DownloadFileWithUniqueName,
 >(
   options: { keys?: Key[] } = {},
 ): {
@@ -42,6 +43,7 @@ export const useSettings = <
       SettingKey.DownloadMethod,
       SettingKey.TableWithNonPhrasingContent,
       SettingKey.TextHighlight,
+      SettingKey.DownloadFileWithUniqueName,
     ] as Key[],
   } = options
 

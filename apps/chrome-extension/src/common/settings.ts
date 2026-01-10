@@ -9,6 +9,7 @@ export enum SettingKey {
   DownloadMethod = 'download.method',
   TableWithNonPhrasingContent = 'general.table_with_non_phrasing_content',
   TextHighlight = 'general.text_highlight',
+  DownloadFileWithUniqueName = 'download.file_with_unique_name',
 }
 
 export enum Theme {
@@ -33,6 +34,7 @@ export interface Settings {
   [SettingKey.DownloadMethod]: (typeof DownloadMethod)[keyof typeof DownloadMethod]
   [SettingKey.TableWithNonPhrasingContent]: (typeof TableWithNonPhrasingContent)[keyof typeof TableWithNonPhrasingContent]
   [SettingKey.TextHighlight]: boolean
+  [SettingKey.DownloadFileWithUniqueName]: boolean
 }
 
 export const fallbackSettings: Settings = {
@@ -43,6 +45,7 @@ export const fallbackSettings: Settings = {
     : DownloadMethod.Direct,
   [SettingKey.TableWithNonPhrasingContent]: TableWithNonPhrasingContent.ToHTML,
   [SettingKey.TextHighlight]: true,
+  [SettingKey.DownloadFileWithUniqueName]: false,
 }
 
 export const getSettings = async <Key extends keyof Settings>(
