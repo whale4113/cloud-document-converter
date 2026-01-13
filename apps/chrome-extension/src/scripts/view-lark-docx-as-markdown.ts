@@ -94,7 +94,9 @@ const main = async () => {
     settings[SettingKey.TableWithNonPhrasingContent] ===
     TableWithNonPhrasingContent.ToHTML
   ) {
-    transformInvalidTablesToHtml(invalidTables)
+    transformInvalidTablesToHtml(invalidTables, {
+      allowDangerousHtml: true,
+    })
   }
 
   const markdown = Docx.stringify(root)
