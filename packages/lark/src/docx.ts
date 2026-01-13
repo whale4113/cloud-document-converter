@@ -24,6 +24,7 @@ import {
 } from './utils/mdast'
 import { resolveFileDownloadUrl } from './file'
 import isString from 'lodash-es/isString'
+import escape from 'lodash-es/escape'
 
 declare module 'mdast' {
   interface ImageData {
@@ -720,7 +721,7 @@ export const transformOperationsToPhrasingContents = (
     if (options.highlight && (textHighlight || textHighlightBackground)) {
       return {
         type: 'html',
-        value: `<span style="color: ${textHighlight ?? 'inherit'}; background-color: ${textHighlightBackground ?? 'inherit'}">${insert}</span>`,
+        value: `<span style="color: ${textHighlight ?? 'inherit'}; background-color: ${textHighlightBackground ?? 'inherit'}">${escape(insert)}</span>`,
       }
     }
 
