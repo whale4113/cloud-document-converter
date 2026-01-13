@@ -95,7 +95,7 @@ const main = async () => {
     TableWithNonPhrasingContent.ToHTML
   ) {
     transformInvalidTablesToHtml(invalidTables, {
-      allowDangerousHtml: settings[SettingKey.TextHighlight],
+      allowDangerousHtml: true,
     })
   }
 

@@ -527,7 +527,7 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
         TableWithNonPhrasingContent.ToHTML
       ) {
         transformInvalidTablesToHtml(invalidTables, {
-          allowDangerousHtml: settings[SettingKey.TextHighlight],
+          allowDangerousHtml: true,
         })
       }
 
@@ -591,7 +591,7 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
         TableWithNonPhrasingContent.ToHTML
       ) {
         transformInvalidTablesToHtml(invalidTables, {
-          allowDangerousHtml: settings[SettingKey.TextHighlight],
+          allowDangerousHtml: true,
         })
       }
 
