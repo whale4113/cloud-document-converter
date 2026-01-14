@@ -1,5 +1,14 @@
 # @dolphin/chrome-extension
 
+## 1.10.4
+
+### Patch Changes
+
+- [#105](https://github.com/whale4113/cloud-document-converter/pull/105) [`7973938`](https://github.com/whale4113/cloud-document-converter/commit/797393840eead1429d0ba73130f22f79af143cb6) Thanks [@jiyee](https://github.com/jiyee)! - feat: add option to use unique name for files
+
+- Updated dependencies [[`f9d81ef`](https://github.com/whale4113/cloud-document-converter/commit/f9d81eff6c54ab4547f824cc79ca89608f349571)]:
+  - @dolphin/lark@2.6.2
+
 ## 1.10.3
 
 ### Patch Changes
