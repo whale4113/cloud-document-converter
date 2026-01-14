@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Switch } from '@/components/ui/switch'
 import { SettingKey, DownloadMethod } from '@/common/settings'
 import { useSettings } from '../shared/settings'
 
@@ -32,6 +33,7 @@ const { t } = useI18n()
 
 const schema = z.object({
   [SettingKey.DownloadMethod]: z.enum(DownloadMethod),
+  [SettingKey.DownloadFileWithUniqueName]: z.boolean(),
 })
 
 const { query, mutation } = useSettings()
@@ -43,7 +45,12 @@ const { meta, values, isSubmitting, handleSubmit, resetForm } = useForm({
 
 watch(query.data, newValues => {
   if (newValues) {
-    resetForm({ values: pick(newValues, [SettingKey.DownloadMethod]) })
+    resetForm({
+      values: pick(newValues, [
+        SettingKey.DownloadMethod,
+        SettingKey.DownloadFileWithUniqueName,
+      ]),
+    })
   }
 })
 
@@ -112,6 +119,28 @@ const downloadMethodDescription = computed(() => {
                 </SelectGroup>
               </SelectContent>
             </Select>
+          </Field>
+        </VeeField>
+        <VeeField
+          v-slot="{ field, errors }"
+          :name="`[${SettingKey.DownloadFileWithUniqueName}]`"
+        >
+          <Field orientation="horizontal" :data-invalid="!!errors.length">
+            <FieldContent>
+              <FieldLabel for="form-vee-download-file-with-unique-name">{{
+                t('download.file_with_unique_name')
+              }}</FieldLabel>
+              <FieldError v-if="errors.length" :errors="errors" />
+            </FieldContent>
+            <Skeleton v-if="query.isPending.value" class="h-9 w-40" />
+            <Switch
+              v-else
+              id="form-vee-download-file-with-unique-name"
+              :name="field.name"
+              :model-value="field.value"
+              :aria-invalid="!!errors.length"
+              @update:model-value="field.onChange"
+            />
           </Field>
         </VeeField>
         <Button

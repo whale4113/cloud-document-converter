@@ -69,6 +69,7 @@ catalogs:
     reka-ui: 2.5.1
     serialize-error: ^12.0.0
     tslib: ^2.8.1
+    uuid: 13.0.0
     vee-validate: 4.15.1
     vue: ^3.5.22
     vue-i18n: 12.0.0-alpha.3

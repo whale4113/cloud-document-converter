@@ -48,6 +48,7 @@
     "radash": "catalog:prod",
     "reka-ui": "catalog:prod",
     "serialize-error": "catalog:prod",
+    "uuid": "catalog:prod",
     "vee-validate": "catalog:prod",
     "vue": "catalog:prod",
     "vue-i18n": "catalog:prod",
