@@ -1,7 +1,7 @@
 import type * as mdast from 'mdast'
 import chunk from 'lodash-es/chunk'
 import {
-  svgToBlob,
+  toBlob as svgToBlob,
   imageDataToBlob,
   compare,
   isDefined,
