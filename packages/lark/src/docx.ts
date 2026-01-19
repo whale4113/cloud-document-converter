@@ -351,6 +351,11 @@ enum ISVBlockTypeId {
    * Text Drawing
    */
   TextDrawing = 'blk_631fefbbae02400430b8f9f4',
+
+  /**
+   * Timeline
+   */
+  Timeline = 'blk_6358a421bca0001c22536e4c',
   /**
    * Other ISV block (type inference)
    */
@@ -392,7 +397,33 @@ interface TextDrawingBlock extends Block {
   }
 }
 
-type ISVBlocks = TextDrawingBlock | OtherISVBlock
+interface Timeline {
+  time: string
+  title: string
+  text?: string
+}
+
+interface TimelineBlock extends Block {
+  type: BlockType.ISV
+  snapshot: {
+    type: BlockType.ISV
+    /**
+     * ISV block type id
+     */
+    block_type_id: ISVBlockTypeId.Timeline
+    /**
+     * ISV block data
+     */
+    data: {
+      /**
+       * Mermaid code
+       */
+      items: Timeline[]
+    }
+  }
+}
+
+type ISVBlocks = TextDrawingBlock | TimelineBlock | OtherISVBlock
 
 interface NotSupportedBlock extends Block {
   type:
@@ -870,7 +901,7 @@ type Mutate<T extends Block> = T extends PageBlock
                         ? mdast.Link
                         : T extends IframeBlock
                           ? mdast.Html
-                          : T extends TextDrawingBlock
+                          : T extends TextDrawingBlock | TimelineBlock
                             ? mdast.Code
                             : null
 
@@ -1428,6 +1459,14 @@ export class Transformer {
           }
 
           return code
+        } else if (block.snapshot.block_type_id === ISVBlockTypeId.Timeline) {
+          const code: mdast.Code = {
+            type: 'code',
+            lang: 'mermaid',
+            value: this.generateMermaidTimeline(block.snapshot.data.items),
+          }
+
+          return code
         }
 
         return null
@@ -1435,6 +1474,24 @@ export class Transformer {
       default:
         return null
     }
+  }
+
+  generateMermaidTimeline(items: Timeline[]): string {
+    let chart = 'timeline\n'
+
+    items.forEach(item => {
+      const cleanTitle = (item.title || '').replace(/:/g, '：')
+      const time = item.time || ''
+
+      if (item.text) {
+        const cleanText = item.text.replace(/\n/g, '<br>')
+        chart += `    ${time} : ${cleanTitle} : ${cleanText}\n`
+      } else {
+        chart += `    ${time} : ${cleanTitle}\n`
+      }
+    })
+
+    return chart
   }
 
   transform<T extends Blocks>(block: T): TransformResult<Mutate<T>> {
