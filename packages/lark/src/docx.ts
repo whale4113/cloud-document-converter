@@ -1425,7 +1425,7 @@ export class Transformer {
 
             for (let i = 0; i < mergedNodes.length; i++) {
               const node = mergedNodes[i]
-              const nextNode = mergedNodes[i + 1]
+              const nextNode = mergedNodes.at(i + 1)
 
               if (node.type === 'paragraph') {
                 normalizedNodes.push(...node.children)
@@ -1434,7 +1434,6 @@ export class Transformer {
               }
 
               if (
-                // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
                 nextNode &&
                 node.type === 'paragraph' &&
                 nextNode.type === 'paragraph'
