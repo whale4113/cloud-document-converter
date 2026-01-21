@@ -17,6 +17,7 @@ const enum TranslationKey {
   UNKNOWN_ERROR = 'unknown_error',
   CONTENT_LOADING = 'content_loading',
   NOT_SUPPORT = 'not_support',
+  NOT_SUPPORT_DOC_1_0 = 'not_support_doc_1_0',
 }
 
 i18next
@@ -31,6 +32,8 @@ i18next
             'Part of the content is still loading and cannot be copied at the moment. Please wait for loading to complete and retry',
           [TranslationKey.NOT_SUPPORT]:
             'This is not a lark document page and cannot be copied as Markdown',
+          [TranslationKey.NOT_SUPPORT_DOC_1_0]:
+            'This is a old version lark document page and cannot be copied as Markdown',
         },
         ...en,
       },
@@ -42,6 +45,8 @@ i18next
             '部分内容仍在加载中，暂时无法复制。请等待加载完成后重试',
           [TranslationKey.NOT_SUPPORT]:
             '这不是一个飞书文档页面，无法复制为 Markdown',
+          [TranslationKey.NOT_SUPPORT_DOC_1_0]:
+            '这是一个旧版飞书文档页面，无法复制为 Markdown',
         },
         ...zh,
       },
@@ -50,7 +55,13 @@ i18next
   .catch(console.error)
 
 const main = async () => {
-  if (!docx.rootBlock) {
+  if (docx.isDoc) {
+    Toast.warning({ content: i18next.t(TranslationKey.NOT_SUPPORT_DOC_1_0) })
+
+    return
+  }
+
+  if (!docx.isDocx) {
     Toast.warning({ content: i18next.t(TranslationKey.NOT_SUPPORT) })
 
     return

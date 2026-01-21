@@ -1,4 +1,5 @@
 interface Window {
+  editor?: Object
   PageMain?: import('./env').PageMain
   Toast?: import('./env').Toast
   User?: import('./env').User

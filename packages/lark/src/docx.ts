@@ -13,7 +13,7 @@ import { gfmStrikethroughToMarkdown } from 'mdast-util-gfm-strikethrough'
 import { gfmTaskListItemToMarkdown } from 'mdast-util-gfm-task-list-item'
 import { gfmTableToMarkdown } from 'mdast-util-gfm-table'
 import { mathToMarkdown, type InlineMath } from 'mdast-util-math'
-import { PageMain, User } from './env'
+import { PageMain, User, isDoc, isDocx } from './env'
 import {
   isBlockquoteContent,
   isParent,
@@ -1290,6 +1290,14 @@ export class Docx {
         ...(options?.extensions ?? []),
       ],
     })
+  }
+
+  get isDocx(): boolean {
+    return isDocx()
+  }
+
+  get isDoc(): boolean {
+    return !isDocx() && isDoc()
   }
 
   get rootBlock(): PageBlock | null {
