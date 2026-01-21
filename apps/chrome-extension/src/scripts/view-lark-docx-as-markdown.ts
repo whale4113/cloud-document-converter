@@ -5,7 +5,10 @@ import { isDefined } from '@dolphin/common'
 import { CommonTranslationKey, en, Namespace, zh } from '../common/i18n'
 import { confirm } from '../common/notification'
 import { reportBug } from '../common/issue'
-import { transformInvalidTablesToHtml } from '../common/utils'
+import {
+  transformInvalidTablesToHtml,
+  transformMentionUsers,
+} from '../common/utils'
 import {
   getSettings,
   SettingKey,
@@ -72,9 +75,11 @@ const main = async () => {
     SettingKey.TextHighlight,
   ])
 
-  const { root, images, invalidTables } = docx.intoMarkdownAST({
+  const { root, images, invalidTables, mentionUsers } = docx.intoMarkdownAST({
     highlight: settings[SettingKey.TextHighlight],
   })
+
+  await transformMentionUsers(mentionUsers)
 
   const tokens = images
     .map(image => {

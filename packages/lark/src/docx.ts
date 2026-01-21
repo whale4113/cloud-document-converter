@@ -51,6 +51,11 @@ declare module 'mdast' {
   interface TableCellData {
     invalidChildren?: mdast.Nodes[]
   }
+
+  interface InlineCodeData {
+    mentionUserId?: string
+    parentBlockRecordId?: string
+  }
 }
 
 /**
@@ -97,15 +102,20 @@ export enum BlockType {
 
 interface Attributes {
   fixEnter?: string
+
   italic?: string
   bold?: string
   strikethrough?: string
+
   inlineCode?: string
-  link?: string
   equation?: string
   textHighlight?: string
   textHighlightBackground?: string
   'inline-component'?: string
+
+  link?: string
+  mentionUserId?: string
+
   [attrName: string]: unknown
 }
 
@@ -607,7 +617,7 @@ export const mergePhrasingContents = (
       current.type === 'strong' ||
       current.type === 'delete' ||
       current.type === 'text' ||
-      current.type === 'inlineCode'
+      (current.type === 'inlineCode' && !current.data?.mentionUserId)
     ) {
       return current.type === next.type
     }
@@ -648,7 +658,9 @@ export interface transformOperationsToPhrasingContentsOptions {
 export const transformOperationsToPhrasingContents = (
   ops: Operation[],
   options: transformOperationsToPhrasingContentsOptions = {},
-): mdast.PhrasingContent[] => {
+): { contents: mdast.PhrasingContent[]; mentionUsers: mdast.InlineCode[] } => {
+  const mentionUsers: mdast.InlineCode[] = []
+
   const operations = ops
     .filter(operation => {
       if (
@@ -669,14 +681,24 @@ export const transformOperationsToPhrasingContents = (
         try {
           const inlineComponent = JSON.parse(
             op.attributes['inline-component'],
-          ) as {
-            type: string
-            data: {
-              raw_url: string
-              title: string
-              uid: string
-            }
-          }
+          ) as
+            | {
+                type: 'mention_doc'
+                data: {
+                  raw_url: string
+                  title: string
+                }
+              }
+            | {
+                type: 'user'
+                data: {
+                  uid: string
+                }
+              }
+            | {
+                type: 'string'
+                data: unknown
+              }
           if (inlineComponent.type === 'mention_doc') {
             return {
               attributes: {
@@ -686,17 +708,12 @@ export const transformOperationsToPhrasingContents = (
               insert: op.insert + inlineComponent.data.title,
             } as Operation
           } else if (inlineComponent.type === 'user') {
-            const el: HTMLElement | null = window.document.querySelector(
-              `a[data-token="${inlineComponent.data.uid}"]`,
-            )
-            const text: string = '@' + (el?.innerText ?? '')
-
             return {
               attributes: {
-                inlineCode: true,
                 ...op.attributes,
+                mentionUserId: inlineComponent.data.uid,
               },
-              insert: text,
+              insert: '',
             }
           }
 
@@ -769,8 +786,27 @@ export const transformOperationsToPhrasingContents = (
     op: Operation,
   ): mdast.Text | mdast.InlineCode | InlineMath | mdast.Html => {
     const { attributes, insert } = op
-    const { inlineCode, equation, textHighlight, textHighlightBackground } =
-      attributes ?? {}
+    const {
+      inlineCode,
+      equation,
+      textHighlight,
+      textHighlightBackground,
+      mentionUserId,
+    } = attributes ?? {}
+
+    if (mentionUserId) {
+      const mentionUser: mdast.InlineCode = {
+        type: 'inlineCode',
+        value: insert,
+        data: {
+          mentionUserId,
+        },
+      }
+
+      mentionUsers.push(mentionUser)
+
+      return mentionUser
+    }
 
     if (inlineCode) {
       return {
@@ -820,7 +856,12 @@ export const transformOperationsToPhrasingContents = (
     return node
   })
 
-  return mergePhrasingContents(nodes)
+  const contents = mergePhrasingContents(nodes)
+
+  return {
+    contents,
+    mentionUsers,
+  }
 }
 
 const fetchImageSources = (imageBlock: ImageBlock) =>
@@ -942,11 +983,13 @@ interface TransformResult<T> {
   images: mdast.Image[]
   invalidTables: InvalidTable[]
   files: mdast.Link[]
+  mentionUsers: mdast.InlineCode[]
 }
 
 export class Transformer {
   private parent: mdast.Parent | null = null
   private images: mdast.Image[] = []
+  private mentionUsers: mdast.InlineCode[] = []
   private invalidTables: InvalidTable[] = []
   /**
    * Resource link to file.
@@ -1027,6 +1070,23 @@ export class Transformer {
   }
 
   private _transform = (block: Blocks): mdast.Nodes | null => {
+    const createChildrenFromOps = () => {
+      const { contents, mentionUsers } = transformOperationsToPhrasingContents(
+        block.zoneState?.content.ops ?? [],
+        { highlight: this.options.highlight },
+      )
+
+      mentionUsers.forEach(user => {
+        if (user.data) {
+          user.data.parentBlockRecordId = block.record?.id
+        }
+      })
+
+      this.mentionUsers = this.mentionUsers.concat(mentionUsers)
+
+      return contents
+    }
+
     switch (block.type) {
       case BlockType.PAGE: {
         return this.transformParentBlock(
@@ -1055,10 +1115,7 @@ export class Transformer {
         const heading: mdast.Heading = {
           type: 'heading',
           depth,
-          children: transformOperationsToPhrasingContents(
-            block.zoneState?.content.ops ?? [],
-            { highlight: this.options.highlight },
-          ),
+          children: createChildrenFromOps(),
         }
 
         if (typeof block.snapshot.seq === 'string') {
@@ -1112,10 +1169,7 @@ export class Transformer {
       case BlockType.TODO: {
         const paragraph: mdast.Paragraph = {
           type: 'paragraph',
-          children: transformOperationsToPhrasingContents(
-            block.zoneState?.content.ops ?? [],
-            { highlight: this.options.highlight },
-          ),
+          children: createChildrenFromOps(),
         }
         return this.transformParentBlock(
           block,
@@ -1147,10 +1201,7 @@ export class Transformer {
       case BlockType.HEADING9: {
         const paragraph: mdast.Paragraph = {
           type: 'paragraph',
-          children: transformOperationsToPhrasingContents(
-            block.zoneState?.content.ops ?? [],
-            { highlight: this.options.highlight },
-          ),
+          children: createChildrenFromOps(),
         }
         return paragraph
       }
@@ -1502,12 +1553,16 @@ export class Transformer {
       images: this.images,
       invalidTables: this.invalidTables,
       files: this.files,
+      mentionUsers: this.mentionUsers,
     }
 
     this.parent = null
+
     this.images = []
     this.invalidTables = []
     this.files = []
+    this.mentionUsers = []
+
     this.sequences = []
 
     return result
@@ -1528,6 +1583,20 @@ export class Docx {
         ...(options?.extensions ?? []),
       ],
     })
+  }
+
+  static async locateBlockWithRecordId(recordId: string): Promise<boolean> {
+    try {
+      if (!PageMain) {
+        return false
+      }
+
+      return await PageMain.locateBlockWithRecordIdImpl(recordId)
+    } catch (error) {
+      console.error(error)
+    }
+
+    return false
   }
 
   get rootBlock(): PageBlock | null {
@@ -1611,27 +1680,13 @@ export class Docx {
         images: [],
         invalidTables: [],
         files: [],
+        mentionUsers: [],
       }
-    }
-
-    const locateBlockWithRecordId = async (
-      recordId: string,
-    ): Promise<boolean> => {
-      try {
-        if (!PageMain) {
-          return false
-        }
-
-        return await PageMain.locateBlockWithRecordIdImpl(recordId)
-      } catch (error) {
-        console.error(error)
-      }
-
-      return false
     }
 
     const transformer = new Transformer({
-      locateBlockWithRecordId,
+      locateBlockWithRecordId: recordId =>
+        Docx.locateBlockWithRecordId(recordId),
       ...transformerOptions,
     })
 

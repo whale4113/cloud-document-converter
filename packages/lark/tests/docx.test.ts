@@ -243,7 +243,7 @@ describe('transformOperationsToPhrasingContents()', () => {
               fixEnter: 'true',
             },
           },
-        ]),
+        ]).contents,
       ).toStrictEqual([{ type: 'inlineCode', value: 'code' }])
     })
 
@@ -278,7 +278,7 @@ describe('transformOperationsToPhrasingContents()', () => {
               fixEnter: 'true',
             },
           },
-        ]),
+        ]).contents,
       ).toStrictEqual([
         {
           type: 'strong',
@@ -322,7 +322,7 @@ describe('transformOperationsToPhrasingContents()', () => {
               fixEnter: 'true',
             },
           },
-        ]),
+        ]).contents,
       ).toStrictEqual([
         {
           type: 'strong',
@@ -362,7 +362,7 @@ describe('transformOperationsToPhrasingContents()', () => {
               fixEnter: 'true',
             },
           },
-        ]),
+        ]).contents,
       ).toStrictEqual([
         {
           type: 'emphasis',
@@ -387,7 +387,7 @@ describe('transformOperationsToPhrasingContents()', () => {
               fixEnter: 'true',
             },
           },
-        ]),
+        ]).contents,
       ).toStrictEqual([
         {
           type: 'strong',
@@ -427,7 +427,7 @@ describe('transformOperationsToPhrasingContents()', () => {
               fixEnter: 'true',
             },
           },
-        ]),
+        ]).contents,
       ).toStrictEqual([
         {
           type: 'strong',
@@ -480,7 +480,7 @@ describe('transformOperationsToPhrasingContents()', () => {
               fixEnter: 'true',
             },
           },
-        ]),
+        ]).contents,
       ).toStrictEqual([
         {
           type: 'strong',
@@ -519,7 +519,7 @@ describe('transformOperationsToPhrasingContents()', () => {
               fixEnter: 'true',
             },
           },
-        ]),
+        ]).contents,
       ).toStrictEqual([
         {
           type: 'delete',
@@ -568,7 +568,7 @@ describe('transformOperationsToPhrasingContents()', () => {
               fixEnter: 'true',
             },
           },
-        ]),
+        ]).contents,
       ).toStrictEqual([
         {
           type: 'strong',
@@ -615,7 +615,7 @@ describe('transformOperationsToPhrasingContents()', () => {
               fixEnter: 'true',
             },
           },
-        ]),
+        ]).contents,
       ).toStrictEqual([
         {
           type: 'link',
@@ -658,7 +658,7 @@ describe('transformOperationsToPhrasingContents()', () => {
               fixEnter: 'true',
             },
           },
-        ]),
+        ]).contents,
       ).toStrictEqual([
         {
           type: 'strong',
@@ -685,8 +685,41 @@ describe('transformOperationsToPhrasingContents()', () => {
           {
             insert: '\n',
           },
-        ]),
+        ]).contents,
       ).toStrictEqual([{ type: 'text', value: 'emphasis' }])
+    })
+  })
+
+  describe('mention user', () => {
+    test('simple case', () => {
+      expect(
+        transformOperationsToPhrasingContents([
+          {
+            attributes: {
+              'inline-component': JSON.stringify({
+                type: 'user',
+                data: { uid: 'a' },
+              }),
+            },
+            insert: '',
+          },
+          {
+            attributes: {
+              'inline-component': JSON.stringify({
+                type: 'user',
+                data: { uid: 'b' },
+              }),
+            },
+            insert: '',
+          },
+          {
+            insert: '\n',
+          },
+        ]).mentionUsers,
+      ).toStrictEqual([
+        { type: 'inlineCode', value: '', data: { mentionUserId: 'a' } },
+        { type: 'inlineCode', value: '', data: { mentionUserId: 'b' } },
+      ])
     })
   })
 })
