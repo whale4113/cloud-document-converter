@@ -617,33 +617,41 @@ export const mergePhrasingContents = (
     }
 
     return false
-  }).map(nodes => {
-    const node = nodes.reduce((pre, cur) => {
-      if ('children' in pre && 'children' in cur) {
-        return {
-          ...pre,
-          ...cur,
-          children: pre.children.concat(cur.children),
-        }
-      }
-
-      if ('value' in pre && 'value' in cur) {
-        return {
-          ...pre,
-          ...cur,
-          value: pre.value.concat(cur.value),
-        }
-      }
-
-      return pre
-    })
-
-    if ('children' in node) {
-      node.children = mergePhrasingContents(node.children)
-    }
-
-    return node
   })
+    .map(nodes => {
+      const node = nodes.reduce((pre, cur) => {
+        if ('children' in pre && 'children' in cur) {
+          return {
+            ...pre,
+            ...cur,
+            children: pre.children.concat(cur.children),
+          }
+        }
+
+        if ('value' in pre && 'value' in cur) {
+          return {
+            ...pre,
+            ...cur,
+            value: pre.value.concat(cur.value),
+          }
+        }
+
+        return pre
+      })
+
+      if ('children' in node) {
+        node.children = mergePhrasingContents(node.children)
+      }
+
+      return node
+    })
+    .flatMap((current, index, merged) => {
+      const next = merged.at(index + 1)
+
+      return next && current.type === next.type
+        ? [current, { type: 'text', value: ' ' } satisfies mdast.Text]
+        : [current]
+    })
 
 export interface transformOperationsToPhrasingContentsOptions {
   highlight?: boolean
