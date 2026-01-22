@@ -129,7 +129,6 @@ interface BlockZoneState {
   content: {
     ops: Operation[]
   }
-  _node: HTMLElement
 }
 
 interface BlockSnapshot {
