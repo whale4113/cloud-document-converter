@@ -56,3 +56,6 @@ export interface PageMain {
 }
 
 export const PageMain: PageMain | undefined = window.PageMain
+
+export const isDoc = (): boolean => window.editor !== undefined
+export const isDocx = (): boolean => window.PageMain !== undefined

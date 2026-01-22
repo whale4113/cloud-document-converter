@@ -26,6 +26,7 @@ const enum TranslationKey {
   CONTENT_LOADING = 'content_loading',
   UNKNOWN_ERROR = 'unknown_error',
   NOT_SUPPORT = 'not_support',
+  NOT_SUPPORT_DOC_1_0 = 'not_support_doc_1_0',
   DOWNLOADING_FILE = 'downloading_file',
   FAILED_TO_DOWNLOAD = 'failed_to_download',
   DOWNLOAD_PROGRESS = 'download_progress',
@@ -53,6 +54,8 @@ i18next
           [TranslationKey.UNKNOWN_ERROR]: 'Unknown error during download',
           [TranslationKey.NOT_SUPPORT]:
             'This is not a lark document page and cannot be downloaded as Markdown',
+          [TranslationKey.NOT_SUPPORT_DOC_1_0]:
+            'This is a old version lark document page and cannot be downloaded as Markdown',
           [TranslationKey.DOWNLOADING_FILE]:
             'Download {{name}} in: {{progress}}% (please do not refresh or close the page)',
           [TranslationKey.FAILED_TO_DOWNLOAD]: 'Failed to download {{name}}',
@@ -75,6 +78,8 @@ i18next
           [TranslationKey.UNKNOWN_ERROR]: '下载过程中出现未知错误',
           [TranslationKey.NOT_SUPPORT]:
             '这不是一个飞书文档页面，无法下载为 Markdown',
+          [TranslationKey.NOT_SUPPORT_DOC_1_0]:
+            '这是一个旧版飞书文档页面，无法下载为 Markdown',
           [TranslationKey.DOWNLOADING_FILE]:
             '下载 {{name}} 中：{{progress}}%（请不要刷新或关闭页面）',
           [TranslationKey.FAILED_TO_DOWNLOAD]: '下载 {{name}} 失败',
@@ -516,7 +521,13 @@ const prepare = async (): Promise<PrepareResult> => {
 const main = async (options: { signal?: AbortSignal } = {}) => {
   const { signal } = options
 
-  if (!docx.rootBlock) {
+  if (docx.isDoc) {
+    Toast.warning({ content: i18next.t(TranslationKey.NOT_SUPPORT_DOC_1_0) })
+
+    throw new Error(DOWNLOAD_ABORTED)
+  }
+
+  if (!docx.isDocx) {
     Toast.warning({ content: i18next.t(TranslationKey.NOT_SUPPORT) })
 
     throw new Error(DOWNLOAD_ABORTED)
