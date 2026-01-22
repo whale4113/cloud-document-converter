@@ -217,10 +217,6 @@ interface TextBlock extends Block {
   type: BlockType.TEXT
 }
 
-interface MentionBlock extends Block<TextBlock> {
-  type: BlockType.TEXT
-}
-
 interface Caption {
   text: {
     initialAttributedTexts: {
@@ -456,7 +452,6 @@ type Blocks =
   | OrderedBlock
   | TodoBlock
   | TextBlock
-  | MentionBlock
   | ImageBlock
   | TableBlock
   | TableCellBlock
@@ -928,7 +923,7 @@ type Mutate<T extends Block> = T extends PageBlock
           ? mdast.Blockquote
           : T extends BulletBlock | OrderedBlock | TodoBlock
             ? mdast.ListItem
-            : T extends TextBlock | MentionBlock
+            : T extends TextBlock
               ? mdast.Text
               : T extends TableBlock | Grid
                 ? mdast.Table
