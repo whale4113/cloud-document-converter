@@ -908,6 +908,24 @@ const diagramToSVGElement = (diagram: DiagramBlock): SVGElement | null => {
   return svgElement
 }
 
+const generateMermaidTimeline = (items: Timeline[]): string => {
+  let chart = 'timeline\n'
+
+  items.forEach(item => {
+    const cleanTitle = (item.title || '').replace(/:/g, '：')
+    const time = item.time || ''
+
+    if (item.text) {
+      const cleanText = item.text.replace(/\n/g, '<br>')
+      chart += `    ${time} : ${cleanTitle} : ${cleanText}\n`
+    } else {
+      chart += `    ${time} : ${cleanTitle}\n`
+    }
+  })
+
+  return chart
+}
+
 const evaluateAlt = (caption?: Caption) =>
   trimEndEnter(caption?.text.initialAttributedTexts.text?.[0] ?? '')
 
@@ -1455,7 +1473,7 @@ export class Transformer {
           const code: mdast.Code = {
             type: 'code',
             lang: 'mermaid',
-            value: this.generateMermaidTimeline(block.snapshot.data.items),
+            value: generateMermaidTimeline(block.snapshot.data.items),
           }
 
           return code
@@ -1466,24 +1484,6 @@ export class Transformer {
       default:
         return null
     }
-  }
-
-  generateMermaidTimeline(items: Timeline[]): string {
-    let chart = 'timeline\n'
-
-    items.forEach(item => {
-      const cleanTitle = (item.title || '').replace(/:/g, '：')
-      const time = item.time || ''
-
-      if (item.text) {
-        const cleanText = item.text.replace(/\n/g, '<br>')
-        chart += `    ${time} : ${cleanTitle} : ${cleanText}\n`
-      } else {
-        chart += `    ${time} : ${cleanTitle}\n`
-      }
-    })
-
-    return chart
   }
 
   transform<T extends Blocks>(block: T): TransformResult<Mutate<T>> {
