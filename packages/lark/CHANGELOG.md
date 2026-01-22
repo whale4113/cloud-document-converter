@@ -1,5 +1,19 @@
 # @dolphin/lark
 
+## 2.6.2
+
+### Patch Changes
+
+- [#103](https://github.com/whale4113/cloud-document-converter/pull/103) [`e3307fc`](https://github.com/whale4113/cloud-document-converter/commit/e3307fc0178d89f7947ae6e291a34f7a034e3c8a) Thanks [@jiyee](https://github.com/jiyee)! - feat: support isv timeline
+
+- [#103](https://github.com/whale4113/cloud-document-converter/pull/103) [`e3307fc`](https://github.com/whale4113/cloud-document-converter/commit/e3307fc0178d89f7947ae6e291a34f7a034e3c8a) Thanks [@jiyee](https://github.com/jiyee)! - feat: support mention user
+
+- [#103](https://github.com/whale4113/cloud-document-converter/pull/103) [`e3307fc`](https://github.com/whale4113/cloud-document-converter/commit/e3307fc0178d89f7947ae6e291a34f7a034e3c8a) Thanks [@jiyee](https://github.com/jiyee)! - feat: preserve grid layout
+
+- [#102](https://github.com/whale4113/cloud-document-converter/pull/102) [`f9d81ef`](https://github.com/whale4113/cloud-document-converter/commit/f9d81eff6c54ab4547f824cc79ca89608f349571) Thanks [@jiyee](https://github.com/jiyee)! - fix: text highlight missing in invalid children of table cell
+
+- [#103](https://github.com/whale4113/cloud-document-converter/pull/103) [`e3307fc`](https://github.com/whale4113/cloud-document-converter/commit/e3307fc0178d89f7947ae6e291a34f7a034e3c8a) Thanks [@jiyee](https://github.com/jiyee)! - feat: support diagram
+
 ## 2.6.1
 
 ### Patch Changes
