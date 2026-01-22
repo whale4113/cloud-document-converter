@@ -1,7 +1,8 @@
 import { toHast } from 'mdast-util-to-hast'
 import { toHtml } from 'hast-util-to-html'
-import type { InvalidTable } from '@dolphin/lark'
+import { Docx, type InvalidTable, type mdast } from '@dolphin/lark'
 import { v4 as uuidv4 } from 'uuid'
+import { Second, waitForFunction } from '@dolphin/common'
 
 interface Ref<T> {
   current: T
@@ -129,4 +130,36 @@ export const transformInvalidTablesToHtml = (
       })
     }
   })
+}
+
+export const transformMentionUsers = async (
+  mentionUsers: mdast.InlineCode[],
+): Promise<void> => {
+  for (const user of mentionUsers) {
+    if (user.data?.parentBlockRecordId && user.data.mentionUserId) {
+      await waitForFunction(
+        () =>
+          Docx.locateBlockWithRecordId(
+            user.data?.parentBlockRecordId ?? '',
+          ).then(
+            isSuccess =>
+              isSuccess &&
+              document.querySelector(
+                `a[data-token="${user.data?.mentionUserId ?? ''}"]`,
+              ) !== null,
+          ),
+        {
+          timeout: 3 * Second,
+        },
+      )
+
+      const el: HTMLElement | null = document.querySelector(
+        `a[data-token="${user.data.mentionUserId}"]`,
+      )
+
+      if (el?.innerText) {
+        user.value = '@' + el.innerText
+      }
+    }
+  }
 }

@@ -11,6 +11,7 @@ import { legacyFileSave } from '../common/legacy'
 import { reportBug } from '../common/issue'
 import {
   transformInvalidTablesToHtml,
+  transformMentionUsers,
   UniqueFileName,
   withSignal,
 } from '../common/utils'
@@ -536,13 +537,19 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
     SettingKey.TableWithNonPhrasingContent,
     SettingKey.TextHighlight,
     SettingKey.DownloadFileWithUniqueName,
+    SettingKey.FlatGrid,
   ])
 
-  const { root, images, files, invalidTables } = docx.intoMarkdownAST({
-    whiteboard: true,
-    file: true,
-    highlight: settings[SettingKey.TextHighlight],
-  })
+  const { root, images, files, invalidTables, mentionUsers } =
+    docx.intoMarkdownAST({
+      whiteboard: true,
+      diagram: true,
+      file: true,
+      highlight: settings[SettingKey.TextHighlight],
+      flatGrid: settings[SettingKey.FlatGrid],
+    })
+
+  await transformMentionUsers(mentionUsers)
 
   const recommendName = docx.pageTitle
     ? normalizeFileName(docx.pageTitle.slice(0, OneHundred))
