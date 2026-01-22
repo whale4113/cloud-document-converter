@@ -13,6 +13,11 @@
       "types": "./dist/utils.d.mts",
       "default": "./dist/utils.mjs"
     },
+    "./svg": {
+      "dev": "./src/svg.ts",
+      "types": "./dist/svg.d.mts",
+      "default": "./dist/svg.mjs"
+    },
     "./image": {
       "dev": "./src/image.ts",
       "types": "./dist/image.d.mts",

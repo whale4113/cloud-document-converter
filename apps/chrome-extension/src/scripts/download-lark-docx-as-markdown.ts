@@ -11,6 +11,7 @@ import { legacyFileSave } from '../common/legacy'
 import { reportBug } from '../common/issue'
 import {
   transformInvalidTablesToHtml,
+  transformMentionUsers,
   UniqueFileName,
   withSignal,
 } from '../common/utils'
@@ -151,11 +152,13 @@ const downloadImage = async (
   image: mdast.Image,
   options: {
     signal?: AbortSignal
+    useUUID?: boolean
+    markdownFileName?: string
   } = {},
 ): Promise<DownloadResult | null> => {
   if (!image.data) return null
 
-  const { signal } = options
+  const { signal, useUUID = false, markdownFileName = '' } = options
 
   const { name: originName, fetchSources, fetchBlob } = image.data
 
@@ -171,7 +174,12 @@ const downloadImage = async (
           const content = await fetchBlob()
           if (!content) return null
 
-          const name = uniqueFileName.generate('diagram.png')
+          const baseName = markdownFileName
+            ? `${markdownFileName}-diagram.png`
+            : 'diagram.png'
+          const name = useUUID
+            ? uniqueFileName.generateWithUUID(baseName)
+            : uniqueFileName.generate(baseName)
           const filename = `images/${name}`
 
           image.url = filename
@@ -190,7 +198,12 @@ const downloadImage = async (
           const sources = await fetchSources()
           if (!sources) return null
 
-          const name = uniqueFileName.generate(originName)
+          const baseName = markdownFileName
+            ? `${markdownFileName}-${originName}`
+            : originName
+          const name = useUUID
+            ? uniqueFileName.generateWithUUID(baseName)
+            : uniqueFileName.generate(baseName)
           const filename = `images/${name}`
 
           const { src } = sources
@@ -268,11 +281,13 @@ const downloadFile = async (
   file: mdast.Link,
   options: {
     signal?: AbortSignal
+    useUUID?: boolean
+    markdownFileName?: string
   } = {},
 ): Promise<DownloadResult | null> => {
   if (!file.data?.name || !file.data.fetchFile) return null
 
-  const { signal } = options
+  const { signal, useUUID = false, markdownFileName = '' } = options
 
   const { name, fetchFile } = file.data
 
@@ -285,7 +300,12 @@ const downloadFile = async (
   const result = await withSignal(
     async () => {
       try {
-        const filename = `files/${uniqueFileName.generate(name)}`
+        const baseName = markdownFileName ? `${markdownFileName}-${name}` : name
+        const filename = `files/${
+          useUUID
+            ? uniqueFileName.generateWithUUID(baseName)
+            : uniqueFileName.generate(baseName)
+        }`
 
         const response = await fetchFile({ signal: controller.signal })
         try {
@@ -357,9 +377,18 @@ const downloadFiles = async (
      */
     batchSize?: number
     signal?: AbortSignal
+    useUUID?: boolean
+    markdownFileName?: string
   } = {},
 ): Promise<DownloadResult[]> => {
-  const { onProgress, onComplete, batchSize = 3, signal } = options
+  const {
+    onProgress,
+    onComplete,
+    batchSize = 3,
+    signal,
+    useUUID = false,
+    markdownFileName = '',
+  } = options
 
   let completeEventCalled = false
   const onCompleteOnce = () => {
@@ -390,8 +419,16 @@ const downloadFiles = async (
             try {
               const result =
                 file.type === 'image'
-                  ? await downloadImage(file, { signal })
-                  : await downloadFile(file, { signal })
+                  ? await downloadImage(file, {
+                      signal,
+                      useUUID,
+                      markdownFileName,
+                    })
+                  : await downloadFile(file, {
+                      signal,
+                      useUUID,
+                      markdownFileName,
+                    })
 
               if (result) {
                 _results.push(result)
@@ -510,13 +547,20 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
     SettingKey.DownloadMethod,
     SettingKey.TableWithNonPhrasingContent,
     SettingKey.TextHighlight,
+    SettingKey.DownloadFileWithUniqueName,
+    SettingKey.FlatGrid,
   ])
 
-  const { root, images, files, invalidTables } = docx.intoMarkdownAST({
-    whiteboard: true,
-    file: true,
-    highlight: settings[SettingKey.TextHighlight],
-  })
+  const { root, images, files, invalidTables, mentionUsers } =
+    docx.intoMarkdownAST({
+      whiteboard: true,
+      diagram: true,
+      file: true,
+      highlight: settings[SettingKey.TextHighlight],
+      flatGrid: settings[SettingKey.FlatGrid],
+    })
+
+  await transformMentionUsers(mentionUsers)
 
   const recommendName = docx.pageTitle
     ? normalizeFileName(docx.pageTitle.slice(0, OneHundred))
@@ -537,7 +581,9 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
         settings[SettingKey.TableWithNonPhrasingContent] ===
         TableWithNonPhrasingContent.ToHTML
       ) {
-        transformInvalidTablesToHtml(invalidTables)
+        transformInvalidTablesToHtml(invalidTables, {
+          allowDangerousHtml: true,
+        })
       }
 
       const markdown = Docx.stringify(root)
@@ -568,11 +614,15 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
             Toast.remove(TranslationKey.IMAGE)
           },
           signal,
+          useUUID: settings[SettingKey.DownloadFileWithUniqueName],
+          markdownFileName: recommendName,
         }),
         // Diagrams must be downloaded one by one
         downloadFiles(diagrams, {
           batchSize: 1,
           signal,
+          useUUID: settings[SettingKey.DownloadFileWithUniqueName],
+          markdownFileName: recommendName,
         }),
         downloadFiles(files, {
           onProgress: progress => {
@@ -589,6 +639,8 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
             Toast.remove(TranslationKey.FILE)
           },
           signal,
+          useUUID: settings[SettingKey.DownloadFileWithUniqueName],
+          markdownFileName: recommendName,
         }),
       ])
       results.flat(1).forEach(({ filename, content }) => {
@@ -599,7 +651,9 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
         settings[SettingKey.TableWithNonPhrasingContent] ===
         TableWithNonPhrasingContent.ToHTML
       ) {
-        transformInvalidTablesToHtml(invalidTables)
+        transformInvalidTablesToHtml(invalidTables, {
+          allowDangerousHtml: true,
+        })
       }
 
       const markdown = Docx.stringify(root)

@@ -1,5 +1,14 @@
 # @dolphin/chrome-extension
 
+## 1.10.3
+
+### Patch Changes
+
+- [#98](https://github.com/whale4113/cloud-document-converter/pull/98) [`1ce5760`](https://github.com/whale4113/cloud-document-converter/commit/1ce5760c8451116c8315d2fabd87ce7986ba228d) Thanks [@jiyee](https://github.com/jiyee)! - feat: support whether to enable text highlighting or not
+
+- Updated dependencies [[`5983b0a`](https://github.com/whale4113/cloud-document-converter/commit/5983b0ad39de6f212b25600ef677693fadc583e7), [`e2a99f0`](https://github.com/whale4113/cloud-document-converter/commit/e2a99f0327bc2d840bebda5ab311bc3a4d6d2c4a)]:
+  - @dolphin/lark@2.6.1
+
 ## 1.10.2
 
 ### Patch Changes

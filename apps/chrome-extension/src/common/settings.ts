@@ -9,6 +9,8 @@ export enum SettingKey {
   DownloadMethod = 'download.method',
   TableWithNonPhrasingContent = 'general.table_with_non_phrasing_content',
   TextHighlight = 'general.text_highlight',
+  DownloadFileWithUniqueName = 'download.file_with_unique_name',
+  FlatGrid = 'general.flat_grid',
 }
 
 export enum Theme {
@@ -33,6 +35,8 @@ export interface Settings {
   [SettingKey.DownloadMethod]: (typeof DownloadMethod)[keyof typeof DownloadMethod]
   [SettingKey.TableWithNonPhrasingContent]: (typeof TableWithNonPhrasingContent)[keyof typeof TableWithNonPhrasingContent]
   [SettingKey.TextHighlight]: boolean
+  [SettingKey.DownloadFileWithUniqueName]: boolean
+  [SettingKey.FlatGrid]: boolean
 }
 
 export const fallbackSettings: Settings = {
@@ -43,6 +47,8 @@ export const fallbackSettings: Settings = {
     : DownloadMethod.Direct,
   [SettingKey.TableWithNonPhrasingContent]: TableWithNonPhrasingContent.ToHTML,
   [SettingKey.TextHighlight]: true,
+  [SettingKey.DownloadFileWithUniqueName]: false,
+  [SettingKey.FlatGrid]: false,
 }
 
 export const getSettings = async <Key extends keyof Settings>(
@@ -57,16 +63,3 @@ export const getSettings = async <Key extends keyof Settings>(
     return pick(fallbackSettings, keys)
   }
 }
-
-export const getGeneralSettings = async (): Promise<
-  Pick<Settings, SettingKey.Locale | SettingKey.Theme>
-> =>
-  getSettings([
-    SettingKey.Locale,
-    SettingKey.Theme,
-    SettingKey.TableWithNonPhrasingContent,
-  ])
-
-export const getDownloadSettings = async (): Promise<
-  Pick<Settings, SettingKey.DownloadMethod>
-> => getSettings([SettingKey.DownloadMethod])

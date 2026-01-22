@@ -1,6 +1,7 @@
 import type * as mdast from 'mdast'
 import chunk from 'lodash-es/chunk'
 import {
+  toBlob as svgToBlob,
   imageDataToBlob,
   compare,
   isDefined,
@@ -24,6 +25,7 @@ import {
 } from './utils/mdast'
 import { resolveFileDownloadUrl } from './file'
 import isString from 'lodash-es/isString'
+import escape from 'lodash-es/escape'
 
 declare module 'mdast' {
   interface ImageData {
@@ -48,6 +50,11 @@ declare module 'mdast' {
 
   interface TableCellData {
     invalidChildren?: mdast.Nodes[]
+  }
+
+  interface InlineCodeData {
+    mentionUserId?: string
+    parentBlockRecordId?: string
   }
 }
 
@@ -95,15 +102,20 @@ export enum BlockType {
 
 interface Attributes {
   fixEnter?: string
+
   italic?: string
   bold?: string
   strikethrough?: string
+
   inlineCode?: string
-  link?: string
   equation?: string
   textHighlight?: string
   textHighlightBackground?: string
   'inline-component'?: string
+
+  link?: string
+  mentionUserId?: string
+
   [attrName: string]: unknown
 }
 
@@ -308,6 +320,22 @@ interface Whiteboard extends Block {
   }
 }
 
+interface BlockView {
+  getSvg: () => SVGElement | null
+}
+
+interface BlockManager {
+  getBlockViewByBlockId: (blockId: number) => BlockView | null
+}
+
+interface DiagramBlock extends Block {
+  type: BlockType.DIAGRAM
+  blockManager?: BlockManager
+  snapshot: {
+    type: BlockType.DIAGRAM
+  }
+}
+
 interface View extends Block<File> {
   type: BlockType.VIEW
 }
@@ -328,6 +356,11 @@ enum ISVBlockTypeId {
    * Text Drawing
    */
   TextDrawing = 'blk_631fefbbae02400430b8f9f4',
+
+  /**
+   * Timeline
+   */
+  Timeline = 'blk_6358a421bca0001c22536e4c',
   /**
    * Other ISV block (type inference)
    */
@@ -369,14 +402,39 @@ interface TextDrawingBlock extends Block {
   }
 }
 
-type ISVBlocks = TextDrawingBlock | OtherISVBlock
+interface Timeline {
+  time: string
+  title: string
+  text?: string
+}
+
+interface TimelineBlock extends Block {
+  type: BlockType.ISV
+  snapshot: {
+    type: BlockType.ISV
+    /**
+     * ISV block type id
+     */
+    block_type_id: ISVBlockTypeId.Timeline
+    /**
+     * ISV block data
+     */
+    data: {
+      /**
+       * Mermaid code
+       */
+      items: Timeline[]
+    }
+  }
+}
+
+type ISVBlocks = TextDrawingBlock | TimelineBlock | OtherISVBlock
 
 interface NotSupportedBlock extends Block {
   type:
     | BlockType.QUOTE
     | BlockType.BITABLE
     | BlockType.CHAT_CARD
-    | BlockType.DIAGRAM
     | BlockType.MINDNOTE
     | BlockType.SHEET
     | BlockType.FALLBACK
@@ -401,6 +459,7 @@ type Blocks =
   | Callout
   | SyncedSource
   | Whiteboard
+  | DiagramBlock
   | View
   | File
   | IframeBlock
@@ -552,39 +611,47 @@ export const mergePhrasingContents = (
       current.type === 'strong' ||
       current.type === 'delete' ||
       current.type === 'text' ||
-      current.type === 'inlineCode'
+      (current.type === 'inlineCode' && !current.data?.mentionUserId)
     ) {
       return current.type === next.type
     }
 
     return false
-  }).map(nodes => {
-    const node = nodes.reduce((pre, cur) => {
-      if ('children' in pre && 'children' in cur) {
-        return {
-          ...pre,
-          ...cur,
-          children: pre.children.concat(cur.children),
-        }
-      }
-
-      if ('value' in pre && 'value' in cur) {
-        return {
-          ...pre,
-          ...cur,
-          value: pre.value.concat(cur.value),
-        }
-      }
-
-      return pre
-    })
-
-    if ('children' in node) {
-      node.children = mergePhrasingContents(node.children)
-    }
-
-    return node
   })
+    .map(nodes => {
+      const node = nodes.reduce((pre, cur) => {
+        if ('children' in pre && 'children' in cur) {
+          return {
+            ...pre,
+            ...cur,
+            children: pre.children.concat(cur.children),
+          }
+        }
+
+        if ('value' in pre && 'value' in cur) {
+          return {
+            ...pre,
+            ...cur,
+            value: pre.value.concat(cur.value),
+          }
+        }
+
+        return pre
+      })
+
+      if ('children' in node) {
+        node.children = mergePhrasingContents(node.children)
+      }
+
+      return node
+    })
+    .flatMap((current, index, merged) => {
+      const next = merged.at(index + 1)
+
+      return next && current.type === next.type
+        ? [current, { type: 'text', value: ' ' } satisfies mdast.Text]
+        : [current]
+    })
 
 export interface transformOperationsToPhrasingContentsOptions {
   highlight?: boolean
@@ -593,7 +660,9 @@ export interface transformOperationsToPhrasingContentsOptions {
 export const transformOperationsToPhrasingContents = (
   ops: Operation[],
   options: transformOperationsToPhrasingContentsOptions = {},
-): mdast.PhrasingContent[] => {
+): { contents: mdast.PhrasingContent[]; mentionUsers: mdast.InlineCode[] } => {
+  const mentionUsers: mdast.InlineCode[] = []
+
   const operations = ops
     .filter(operation => {
       if (
@@ -614,13 +683,24 @@ export const transformOperationsToPhrasingContents = (
         try {
           const inlineComponent = JSON.parse(
             op.attributes['inline-component'],
-          ) as {
-            type: string
-            data: {
-              raw_url: string
-              title: string
-            }
-          }
+          ) as
+            | {
+                type: 'mention_doc'
+                data: {
+                  raw_url: string
+                  title: string
+                }
+              }
+            | {
+                type: 'user'
+                data: {
+                  uid: string
+                }
+              }
+            | {
+                type: 'string'
+                data: unknown
+              }
           if (inlineComponent.type === 'mention_doc') {
             return {
               attributes: {
@@ -629,6 +709,14 @@ export const transformOperationsToPhrasingContents = (
               },
               insert: op.insert + inlineComponent.data.title,
             } as Operation
+          } else if (inlineComponent.type === 'user') {
+            return {
+              attributes: {
+                ...op.attributes,
+                mentionUserId: inlineComponent.data.uid,
+              },
+              insert: '',
+            }
           }
 
           return op
@@ -700,8 +788,27 @@ export const transformOperationsToPhrasingContents = (
     op: Operation,
   ): mdast.Text | mdast.InlineCode | InlineMath | mdast.Html => {
     const { attributes, insert } = op
-    const { inlineCode, equation, textHighlight, textHighlightBackground } =
-      attributes ?? {}
+    const {
+      inlineCode,
+      equation,
+      textHighlight,
+      textHighlightBackground,
+      mentionUserId,
+    } = attributes ?? {}
+
+    if (mentionUserId) {
+      const mentionUser: mdast.InlineCode = {
+        type: 'inlineCode',
+        value: insert,
+        data: {
+          mentionUserId,
+        },
+      }
+
+      mentionUsers.push(mentionUser)
+
+      return mentionUser
+    }
 
     if (inlineCode) {
       return {
@@ -720,7 +827,7 @@ export const transformOperationsToPhrasingContents = (
     if (options.highlight && (textHighlight || textHighlightBackground)) {
       return {
         type: 'html',
-        value: `<span style="color: ${textHighlight ?? 'inherit'}; background-color: ${textHighlightBackground ?? 'inherit'}">${insert}</span>`,
+        value: `<span style="color: ${textHighlight ?? 'inherit'}; background-color: ${textHighlightBackground ?? 'inherit'}">${escape(insert)}</span>`,
       }
     }
 
@@ -751,7 +858,12 @@ export const transformOperationsToPhrasingContents = (
     return node
   })
 
-  return mergePhrasingContents(nodes)
+  const contents = mergePhrasingContents(nodes)
+
+  return {
+    contents,
+    mentionUsers,
+  }
 }
 
 const fetchImageSources = (imageBlock: ImageBlock) =>
@@ -791,6 +903,36 @@ const whiteboardToImageData = async (
   return imageData
 }
 
+const diagramToSVGElement = (diagram: DiagramBlock): SVGElement | null => {
+  if (!diagram.blockManager) return null
+
+  const blockView = diagram.blockManager.getBlockViewByBlockId(diagram.id)
+  if (!blockView) return null
+
+  const svgElement = blockView.getSvg()
+  if (!svgElement) return null
+
+  return svgElement
+}
+
+const generateMermaidTimeline = (items: Timeline[]): string => {
+  let chart = 'timeline\n'
+
+  items.forEach(item => {
+    const cleanTitle = (item.title || '').replace(/:/g, '：')
+    const time = item.time || ''
+
+    if (item.text) {
+      const cleanText = item.text.replace(/\n/g, '<br>')
+      chart += `    ${time} : ${cleanTitle} : ${cleanText}\n`
+    } else {
+      chart += `    ${time} : ${cleanTitle}\n`
+    }
+  })
+
+  return chart
+}
+
 const evaluateAlt = (caption?: Caption) =>
   trimEndEnter(caption?.text.initialAttributedTexts.text?.[0] ?? '')
 
@@ -808,11 +950,11 @@ type Mutate<T extends Block> = T extends PageBlock
             ? mdast.ListItem
             : T extends TextBlock
               ? mdast.Text
-              : T extends TableBlock
+              : T extends TableBlock | Grid
                 ? mdast.Table
-                : T extends TableCellBlock
+                : T extends TableCellBlock | GridColumn
                   ? mdast.TableCell
-                  : T extends Whiteboard
+                  : T extends Whiteboard | DiagramBlock
                     ? mdast.Image
                     : T extends View
                       ? mdast.Paragraph
@@ -820,7 +962,7 @@ type Mutate<T extends Block> = T extends PageBlock
                         ? mdast.Link
                         : T extends IframeBlock
                           ? mdast.Html
-                          : T extends TextDrawingBlock
+                          : T extends TextDrawingBlock | TimelineBlock
                             ? mdast.Code
                             : null
 
@@ -831,6 +973,11 @@ interface TransformerOptions {
    */
   whiteboard?: boolean
   /**
+   * Enable convert diagram to image.
+   * @default false
+   */
+  diagram?: boolean
+  /**
    * Enable convert file to resource link.
    * @default false
    */
@@ -840,6 +987,11 @@ interface TransformerOptions {
    * @default false
    */
   highlight?: boolean
+  /**
+   * Enable flat grid.
+   * @default false
+   */
+  flatGrid?: boolean
   /**
    * Locate block with record id.
    */
@@ -856,11 +1008,13 @@ interface TransformResult<T> {
   images: mdast.Image[]
   invalidTables: InvalidTable[]
   files: mdast.Link[]
+  mentionUsers: mdast.InlineCode[]
 }
 
 export class Transformer {
   private parent: mdast.Parent | null = null
   private images: mdast.Image[] = []
+  private mentionUsers: mdast.InlineCode[] = []
   private invalidTables: InvalidTable[] = []
   /**
    * Resource link to file.
@@ -874,8 +1028,10 @@ export class Transformer {
   constructor(
     public options: TransformerOptions = {
       whiteboard: false,
+      diagram: false,
       file: false,
       highlight: false,
+      flatGrid: false,
     },
   ) {}
 
@@ -903,7 +1059,7 @@ export class Transformer {
     const flatChildren = (children: Blocks[]): Blocks[] =>
       children
         .map(child => {
-          if (child.type === BlockType.GRID) {
+          if (child.type === BlockType.GRID && this.options.flatGrid) {
             return flatChildren(
               child.children.map(column => column.children).flat(1),
             )
@@ -942,6 +1098,23 @@ export class Transformer {
   }
 
   private _transform = (block: Blocks): mdast.Nodes | null => {
+    const createChildrenFromOps = () => {
+      const { contents, mentionUsers } = transformOperationsToPhrasingContents(
+        block.zoneState?.content.ops ?? [],
+        { highlight: this.options.highlight },
+      )
+
+      mentionUsers.forEach(user => {
+        if (user.data) {
+          user.data.parentBlockRecordId = block.record?.id
+        }
+      })
+
+      this.mentionUsers = this.mentionUsers.concat(mentionUsers)
+
+      return contents
+    }
+
     switch (block.type) {
       case BlockType.PAGE: {
         return this.transformParentBlock(
@@ -970,10 +1143,7 @@ export class Transformer {
         const heading: mdast.Heading = {
           type: 'heading',
           depth,
-          children: transformOperationsToPhrasingContents(
-            block.zoneState?.content.ops ?? [],
-            { highlight: this.options.highlight },
-          ),
+          children: createChildrenFromOps(),
         }
 
         if (typeof block.snapshot.seq === 'string') {
@@ -1027,10 +1197,7 @@ export class Transformer {
       case BlockType.TODO: {
         const paragraph: mdast.Paragraph = {
           type: 'paragraph',
-          children: transformOperationsToPhrasingContents(
-            block.zoneState?.content.ops ?? [],
-            { highlight: this.options.highlight },
-          ),
+          children: createChildrenFromOps(),
         }
         return this.transformParentBlock(
           block,
@@ -1062,10 +1229,7 @@ export class Transformer {
       case BlockType.HEADING9: {
         const paragraph: mdast.Paragraph = {
           type: 'paragraph',
-          children: transformOperationsToPhrasingContents(
-            block.zoneState?.content.ops ?? [],
-            { highlight: this.options.highlight },
-          ),
+          children: createChildrenFromOps(),
         }
         return paragraph
       }
@@ -1138,7 +1302,51 @@ export class Transformer {
 
         return this.normalizeImage(image)
       }
-      case BlockType.TABLE: {
+      case BlockType.DIAGRAM: {
+        if (!this.options.diagram) return null
+
+        const diagramToImage = (diagram: DiagramBlock): mdast.Image => {
+          const image: mdast.Image = {
+            type: 'image',
+            url: '',
+            data: {
+              fetchBlob: async () => {
+                try {
+                  const {
+                    locateBlockWithRecordId = () => Promise.resolve(false),
+                  } = this.options
+
+                  await waitForFunction(
+                    () =>
+                      locateBlockWithRecordId(diagram.record?.id ?? '').then(
+                        isSuccess => isSuccess,
+                      ),
+                    {
+                      timeout: 3 * Second,
+                    },
+                  )
+                } catch (error) {
+                  console.error(error)
+                }
+
+                const svgElement = diagramToSVGElement(diagram)
+                if (!svgElement) return null
+
+                return await svgToBlob(svgElement)
+              },
+            },
+          }
+          return image
+        }
+
+        const image: mdast.Image = diagramToImage(block)
+
+        this.images.push(image)
+
+        return this.normalizeImage(image)
+      }
+      case BlockType.TABLE:
+      case BlockType.GRID: {
         let table: mdast.Table = { type: 'table', children: [] }
 
         table = this.transformParentBlock(
@@ -1151,12 +1359,14 @@ export class Transformer {
               invalid: tableCells.some(cell => cell.data?.invalidChildren),
             }
 
-            return chunk(tableCells, block.snapshot.columns_id.length).map(
-              tableCells => ({
-                type: 'tableRow',
-                children: tableCells,
-              }),
-            )
+            return (
+              block.type === BlockType.GRID
+                ? [tableCells]
+                : chunk(tableCells, block.snapshot.columns_id.length)
+            ).map(tableCells => ({
+              type: 'tableRow',
+              children: tableCells,
+            }))
           },
         )
 
@@ -1169,16 +1379,35 @@ export class Transformer {
 
         return table
       }
-      case BlockType.CELL: {
+      case BlockType.CELL:
+      case BlockType.GRID_COLUMN: {
         const cell: mdast.TableCell = { type: 'tableCell', children: [] }
 
         return this.transformParentBlock(
           block,
           () => cell,
           nodes => {
-            const normalizedNodes = mergeListItems(nodes)
-              .map(node => (node.type === 'paragraph' ? node.children : node))
-              .flat(1)
+            const mergedNodes = mergeListItems(nodes)
+            const normalizedNodes: mdast.Nodes[] = []
+
+            for (let i = 0; i < mergedNodes.length; i++) {
+              const node = mergedNodes[i]
+              const nextNode = mergedNodes.at(i + 1)
+
+              if (node.type === 'paragraph') {
+                normalizedNodes.push(...node.children)
+              } else {
+                normalizedNodes.push(node as mdast.PhrasingContent)
+              }
+
+              if (
+                nextNode &&
+                node.type === 'paragraph' &&
+                nextNode.type === 'paragraph'
+              ) {
+                normalizedNodes.push({ type: 'html', value: '<br />' })
+              }
+            }
 
             if (normalizedNodes.every(isPhrasingContent)) {
               return normalizedNodes
@@ -1247,6 +1476,14 @@ export class Transformer {
           }
 
           return code
+        } else if (block.snapshot.block_type_id === ISVBlockTypeId.Timeline) {
+          const code: mdast.Code = {
+            type: 'code',
+            lang: 'mermaid',
+            value: generateMermaidTimeline(block.snapshot.data.items),
+          }
+
+          return code
         }
 
         return null
@@ -1264,12 +1501,16 @@ export class Transformer {
       images: this.images,
       invalidTables: this.invalidTables,
       files: this.files,
+      mentionUsers: this.mentionUsers,
     }
 
     this.parent = null
+
     this.images = []
     this.invalidTables = []
     this.files = []
+    this.mentionUsers = []
+
     this.sequences = []
 
     return result
@@ -1290,6 +1531,20 @@ export class Docx {
         ...(options?.extensions ?? []),
       ],
     })
+  }
+  
+  static async locateBlockWithRecordId(recordId: string): Promise<boolean> {
+    try {
+      if (!PageMain) {
+        return false
+      }
+
+      return await PageMain.locateBlockWithRecordIdImpl(recordId)
+    } catch (error) {
+      console.error(error)
+    }
+
+    return false
   }
 
   get isDocx(): boolean {
@@ -1381,27 +1636,13 @@ export class Docx {
         images: [],
         invalidTables: [],
         files: [],
+        mentionUsers: [],
       }
-    }
-
-    const locateBlockWithRecordId = async (
-      recordId: string,
-    ): Promise<boolean> => {
-      try {
-        if (!PageMain) {
-          return false
-        }
-
-        return await PageMain.locateBlockWithRecordIdImpl(recordId)
-      } catch (error) {
-        console.error(error)
-      }
-
-      return false
     }
 
     const transformer = new Transformer({
-      locateBlockWithRecordId,
+      locateBlockWithRecordId: recordId =>
+        Docx.locateBlockWithRecordId(recordId),
       ...transformerOptions,
     })
 

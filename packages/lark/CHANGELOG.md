@@ -1,5 +1,13 @@
 # @dolphin/lark
 
+## 2.6.1
+
+### Patch Changes
+
+- [#97](https://github.com/whale4113/cloud-document-converter/pull/97) [`5983b0a`](https://github.com/whale4113/cloud-document-converter/commit/5983b0ad39de6f212b25600ef677693fadc583e7) Thanks [@jiyee](https://github.com/jiyee)! - fix: flatChildren include TEXT children
+
+- [#98](https://github.com/whale4113/cloud-document-converter/pull/98) [`e2a99f0`](https://github.com/whale4113/cloud-document-converter/commit/e2a99f0327bc2d840bebda5ab311bc3a4d6d2c4a) Thanks [@jiyee](https://github.com/jiyee)! - feat: support font color and font background color
+
 ## 2.6.0
 
 ### Minor Changes
@@ -101,7 +109,6 @@
 - [#3](https://github.com/lujunji4113/cloud-document-converter/pull/3) [`30061c0`](https://github.com/lujunji4113/cloud-document-converter/commit/30061c04642d16f44714c8590253fc0b26b91779) Thanks [@starsflow](https://github.com/starsflow)! - fix: The text content does not necessarily have an ENTER at the end (#3)
 
   Contributors:
-
   - @lujunji4113
   - @starsflow
 

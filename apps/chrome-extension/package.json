@@ -1,6 +1,6 @@
 {
   "name": "@dolphin/chrome-extension",
-  "version": "1.10.2",
+  "version": "1.10.3",
   "type": "module",
   "scripts": {
     "type-check": "vue-tsc -b",
@@ -48,6 +48,7 @@
     "radash": "catalog:prod",
     "reka-ui": "catalog:prod",
     "serialize-error": "catalog:prod",
+    "uuid": "catalog:prod",
     "vee-validate": "catalog:prod",
     "vue": "catalog:prod",
     "vue-i18n": "catalog:prod",
