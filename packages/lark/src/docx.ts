@@ -1317,72 +1317,8 @@ export class Transformer {
 
         return this.normalizeImage(image)
       }
+      case BlockType.TABLE:
       case BlockType.GRID: {
-        const table: mdast.Table = { type: 'table', children: [] }
-        const rows: mdast.TableRow[] = []
-
-        const colCount = block.children.length // grid_column
-
-        const headers: mdast.TableCell[] = []
-        for (let colIndex = 0; colIndex < colCount; colIndex++) {
-          const header: mdast.TableCell = { type: 'tableCell', children: [] }
-          headers.push(header)
-        }
-        rows.push({ type: 'tableRow', children: headers })
-
-        const cells: mdast.TableCell[] = []
-        for (let colIndex = 0; colIndex < colCount; colIndex++) {
-          const grid_column = block.children[colIndex]
-
-          const cell: mdast.TableCell = { type: 'tableCell', children: [] }
-
-          const transformedCell = this.transformParentBlock(
-            grid_column,
-            () => cell,
-            nodes => {
-              const normalizedNodes = mergeListItems(nodes)
-                .map((node, i, arr) => {
-                  const children =
-                    node.type === 'paragraph' ? node.children : [node]
-                  return i === arr.length - 1
-                    ? children
-                    : [
-                        ...children,
-                        { type: 'html', value: '<br />' } as mdast.Html,
-                      ]
-                })
-                .flat(1)
-
-              if (normalizedNodes.every(isPhrasingContent)) {
-                return normalizedNodes
-              }
-
-              cell.data = {
-                invalidChildren: normalizedNodes.filter(
-                  node => !isPhrasingContent(node),
-                ),
-              }
-
-              return normalizedNodes.filter(isPhrasingContent)
-            },
-          )
-
-          cells.push(transformedCell)
-        }
-
-        rows.push({ type: 'tableRow', children: cells })
-
-        table.children = rows
-
-        table.data = {
-          invalid: table.children.some(row =>
-            row.children.some(cell => cell.data?.invalidChildren),
-          ),
-        }
-
-        return table
-      }
-      case BlockType.TABLE: {
         let table: mdast.Table = { type: 'table', children: [] }
 
         table = this.transformParentBlock(
@@ -1395,12 +1331,14 @@ export class Transformer {
               invalid: tableCells.some(cell => cell.data?.invalidChildren),
             }
 
-            return chunk(tableCells, block.snapshot.columns_id.length).map(
-              tableCells => ({
-                type: 'tableRow',
-                children: tableCells,
-              }),
-            )
+            return (
+              block.type === BlockType.GRID
+                ? [tableCells]
+                : chunk(tableCells, block.snapshot.columns_id.length)
+            ).map(tableCells => ({
+              type: 'tableRow',
+              children: tableCells,
+            }))
           },
         )
 
@@ -1413,7 +1351,8 @@ export class Transformer {
 
         return table
       }
-      case BlockType.CELL: {
+      case BlockType.CELL:
+      case BlockType.GRID_COLUMN: {
         const cell: mdast.TableCell = { type: 'tableCell', children: [] }
 
         return this.transformParentBlock(
