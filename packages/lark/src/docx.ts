@@ -968,6 +968,11 @@ interface TransformerOptions {
    */
   highlight?: boolean
   /**
+   * Enable flat grid.
+   * @default false
+   */
+  flatGrid?: boolean
+  /**
    * Locate block with record id.
    */
   locateBlockWithRecordId?: (recordId: string) => Promise<boolean>
@@ -1006,6 +1011,7 @@ export class Transformer {
       diagram: false,
       file: false,
       highlight: false,
+      flatGrid: false,
     },
   ) {}
 
@@ -1033,8 +1039,10 @@ export class Transformer {
     const flatChildren = (children: Blocks[]): Blocks[] =>
       children
         .map(child => {
-          if (child.type === BlockType.GRID) {
-            return [child]
+          if (child.type === BlockType.GRID && this.options.flatGrid) {
+            return flatChildren(
+              child.children.map(column => column.children).flat(1),
+            )
           }
 
           if (

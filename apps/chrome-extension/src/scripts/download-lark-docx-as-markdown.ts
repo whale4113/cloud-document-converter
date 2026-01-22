@@ -537,6 +537,7 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
     SettingKey.TableWithNonPhrasingContent,
     SettingKey.TextHighlight,
     SettingKey.DownloadFileWithUniqueName,
+    SettingKey.FlatGrid,
   ])
 
   const { root, images, files, invalidTables, mentionUsers } =
@@ -545,6 +546,7 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
       diagram: true,
       file: true,
       highlight: settings[SettingKey.TextHighlight],
+      flatGrid: settings[SettingKey.FlatGrid],
     })
 
   await transformMentionUsers(mentionUsers)

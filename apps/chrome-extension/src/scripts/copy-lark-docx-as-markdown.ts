@@ -70,10 +70,12 @@ const main = async () => {
   const settings = await getSettings([
     SettingKey.TableWithNonPhrasingContent,
     SettingKey.TextHighlight,
+    SettingKey.FlatGrid,
   ])
 
   const { root, images, invalidTables, mentionUsers } = docx.intoMarkdownAST({
     highlight: settings[SettingKey.TextHighlight],
+    flatGrid: settings[SettingKey.FlatGrid],
   })
 
   await transformMentionUsers(mentionUsers)

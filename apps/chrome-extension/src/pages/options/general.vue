@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { watch, watchEffect } from 'vue'
+import { watch } from 'vue'
 import { useForm, Field as VeeField } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { z } from 'zod/v4'
@@ -38,6 +38,7 @@ const schema = z.object({
   [SettingKey.Theme]: z.enum(Theme),
   [SettingKey.TableWithNonPhrasingContent]: z.enum(TableWithNonPhrasingContent),
   [SettingKey.TextHighlight]: z.boolean(),
+  [SettingKey.FlatGrid]: z.boolean(),
 })
 
 const { query, mutation } = useSettings()
@@ -55,6 +56,7 @@ watch(query.data, newValues => {
         SettingKey.Theme,
         SettingKey.TableWithNonPhrasingContent,
         SettingKey.TextHighlight,
+        SettingKey.FlatGrid,
       ]),
     })
 
@@ -213,6 +215,25 @@ const onSubmit = handleSubmit.withControlled(async values => {
             <Switch
               v-else
               id="form-vee-general-text-highlight"
+              :name="field.name"
+              :model-value="field.value"
+              :aria-invalid="!!errors.length"
+              @update:model-value="field.onChange"
+            />
+          </Field>
+        </VeeField>
+        <VeeField v-slot="{ field, errors }" :name="`[${SettingKey.FlatGrid}]`">
+          <Field orientation="horizontal" :data-invalid="!!errors.length">
+            <FieldContent>
+              <FieldLabel for="form-vee-general-flat-grid">{{
+                t('general.flat_grid')
+              }}</FieldLabel>
+              <FieldError v-if="errors.length" :errors="errors" />
+            </FieldContent>
+            <Skeleton v-if="query.isPending.value" class="h-9 w-40" />
+            <Switch
+              v-else
+              id="form-vee-general-flat-grid"
               :name="field.name"
               :model-value="field.value"
               :aria-invalid="!!errors.length"
