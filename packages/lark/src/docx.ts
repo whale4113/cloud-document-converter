@@ -1532,7 +1532,7 @@ export class Docx {
       ],
     })
   }
-  
+
   static async locateBlockWithRecordId(recordId: string): Promise<boolean> {
     try {
       if (!PageMain) {
