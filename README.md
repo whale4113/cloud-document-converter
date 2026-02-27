@@ -39,6 +39,7 @@ Install Cloud Document Converter from [Chrome Web Store](https://chromewebstore.
 | Image                                 | ✅                | Image                             |
 | Inline Math                           | ✅                | Math Block                        |
 | Call Out                              | ❌                | Blockquote                        |
+| Synced Reference                      | ✅                |                                   |
 | Diagram (Flowcharts and UML diagrams) | ❌                | Image (Download only)             |
 | Grid                                  | ✅                | flattened/Table/HTML              |
 | Bitable                               | To be determined |                                   |

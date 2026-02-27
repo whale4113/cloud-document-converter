@@ -27,7 +27,7 @@ const liveCopyCases: LiveCopyCase[] = [
   {
     name: 'quote-content',
     url: quoteContentUrl,
-    expectedText: '引用内容',
+    expectedText: '源内容',
   },
 ]
 

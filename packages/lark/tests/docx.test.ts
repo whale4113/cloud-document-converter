@@ -839,6 +839,71 @@ describe('transformer.transform()', () => {
     })
   })
 
+  describe('synced reference', () => {
+    test('reads content from inner block manager', () => {
+      const { root } = transformer.transform({
+        type: BlockType.PAGE,
+        snapshot: {
+          type: BlockType.PAGE,
+        },
+        children: [
+          {
+            type: BlockType.SYNCED_REFERENCE,
+            snapshot: {
+              type: BlockType.SYNCED_REFERENCE,
+              src_page_id: 'source_page',
+              src_block_id: 'source_block',
+            },
+            children: [],
+            innerBlockManager: {
+              rootBlockModel: {
+                type: BlockType.PAGE,
+                snapshot: {
+                  type: BlockType.PAGE,
+                },
+                children: [
+                  {
+                    type: BlockType.TEXT,
+                    snapshot: {
+                      type: BlockType.TEXT,
+                    },
+                    zoneState: {
+                      allText: '源内容\n',
+                      content: {
+                        ops: [
+                          {
+                            insert: '源内容',
+                            attributes: {},
+                          },
+                        ],
+                      },
+                    },
+                    children: [],
+                  },
+                ],
+              },
+            },
+          },
+        ],
+      })
+
+      expect(root).toStrictEqual({
+        type: 'root',
+        children: [
+          {
+            type: 'paragraph',
+            children: [
+              {
+                type: 'text',
+                value: '源内容',
+              },
+            ],
+          },
+        ],
+      })
+    })
+  })
+
   describe('code', () => {
     test('simple example', () => {
       const { root } = transformer.transform({

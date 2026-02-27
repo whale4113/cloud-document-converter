@@ -29,7 +29,7 @@ pnpm run test:e2e --grep @live
 Built-in live cases:
 
 - `https://my.feishu.cn/wiki/Ez2WwNvB2iMjd9kXMw3cfbqDnTe` => `源内容`
-- `https://my.feishu.cn/wiki/Pi5ww1AdKilUGrkyfgrc791unQ8` => `引用内容`
+- `https://my.feishu.cn/wiki/Pi5ww1AdKilUGrkyfgrc791unQ8` => `源内容` (同步块引用内容)
 
 Run in headed mode for local debugging:
 

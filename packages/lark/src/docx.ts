@@ -99,6 +99,7 @@ export enum BlockType {
   TEXT = 'text',
   VIEW = 'view',
   SYNCED_SOURCE = 'synced_source',
+  SYNCED_REFERENCE = 'synced_reference',
   WHITEBOARD = 'whiteboard',
   FALLBACK = 'fallback',
 }
@@ -295,6 +296,15 @@ interface SyncedSource extends Block {
   type: BlockType.SYNCED_SOURCE
 }
 
+interface SyncedReferenceInnerBlockManager {
+  rootBlockModel?: PageBlock
+}
+
+interface SyncedReference extends Block {
+  type: BlockType.SYNCED_REFERENCE
+  innerBlockManager?: SyncedReferenceInnerBlockManager
+}
+
 interface ImageDataWrapper {
   data: ImageData
   release: () => void
@@ -465,6 +475,7 @@ type Blocks =
   | GridColumn
   | Callout
   | SyncedSource
+  | SyncedReference
   | Whiteboard
   | DiagramBlock
   | View
@@ -1091,6 +1102,13 @@ export class Transformer {
             return flatChildren(child.children)
           }
 
+          if (child.type === BlockType.SYNCED_REFERENCE) {
+            return flatChildren(
+              child.innerBlockManager?.rootBlockModel?.children ??
+                child.children,
+            )
+          }
+
           return child
         })
         .flat(1)
@@ -1630,11 +1648,15 @@ export class Docx {
           (block.type === BlockType.FALLBACK &&
             block.snapshot.type === BlockType.WHITEBOARD)
 
+        const isSyncedReferenceReady = (block: Blocks): boolean =>
+          block.type !== BlockType.SYNCED_REFERENCE ||
+          Array.isArray(block.innerBlockManager?.rootBlockModel?.children)
+
         if (checkWhiteboard && isWhiteboard(block)) {
           return prerequisite && block.type !== BlockType.FALLBACK
         }
 
-        return prerequisite
+        return prerequisite && isSyncedReferenceReady(block)
       })
     )
   }
