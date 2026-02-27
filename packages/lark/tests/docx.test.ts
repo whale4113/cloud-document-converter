@@ -626,6 +626,32 @@ describe('transformOperationsToPhrasingContents()', () => {
     })
   })
 
+  describe('underline', () => {
+    test('wrap underlined text with <u></u>', () => {
+      expect(
+        transformOperationsToPhrasingContents([
+          {
+            insert: 'underlined',
+            attributes: {
+              underline: 'true',
+            },
+          },
+          {
+            insert: '\n',
+            attributes: {
+              fixEnter: 'true',
+            },
+          },
+        ]).contents,
+      ).toStrictEqual([
+        {
+          type: 'html',
+          value: '<u>underlined</u>',
+        },
+      ])
+    })
+  })
+
   describe('mark priority', () => {
     test('strong > emphasis', () => {
       expect(

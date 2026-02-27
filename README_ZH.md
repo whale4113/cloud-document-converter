@@ -61,7 +61,7 @@ Cloud Document Converter 是一个浏览器扩展， 支持下载、复制飞书
 | 链接           | ✅            | Link         |
 | 字体颜色       | ✅            | HTML         |
 | 字体背景色     | ✅            | HTML         |
-| 下划线         | 待定         |              |
+| 下划线        | ✅            | HTML (`<u>`) |
 
 ## 其它
 

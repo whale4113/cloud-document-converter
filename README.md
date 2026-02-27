@@ -61,7 +61,7 @@ Install Cloud Document Converter from [Chrome Web Store](https://chromewebstore.
 | Link                  | ✅                | Link         |
 | Font Color            | ✅                | HTML         |
 | Font Background Color | ✅                | HTML         |
-| Underline             | To be determined |              |
+| Underline             | ✅                | HTML (`<u>`) |
 
 ## Other
 

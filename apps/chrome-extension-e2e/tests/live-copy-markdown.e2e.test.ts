@@ -11,11 +11,13 @@ const extensionPath = path.join(workspaceDir, '.cache/extension')
 const { userDataDir: fixedUserDataDir, headless } = resolveLiveCopyConfig()
 const targetUrl = 'https://my.feishu.cn/wiki/Ez2WwNvB2iMjd9kXMw3cfbqDnTe'
 const quoteContentUrl = 'https://my.feishu.cn/wiki/Pi5ww1AdKilUGrkyfgrc791unQ8'
+const underlineUrl = 'https://my.feishu.cn/wiki/X9tGwEQHgiodeqkIVSmcwqJynOh'
 
 interface LiveCopyCase {
   name: string
   url: string
   expectedText: string
+  match: 'equals' | 'contains'
 }
 
 const liveCopyCases: LiveCopyCase[] = [
@@ -23,11 +25,19 @@ const liveCopyCases: LiveCopyCase[] = [
     name: 'source-content',
     url: targetUrl,
     expectedText: '源内容',
+    match: 'equals',
   },
   {
     name: 'quote-content',
     url: quoteContentUrl,
     expectedText: '源内容',
+    match: 'equals',
+  },
+  {
+    name: 'underline-content',
+    url: underlineUrl,
+    expectedText: '<u>下划线样式</u>',
+    match: 'contains',
   },
 ]
 
@@ -87,28 +97,33 @@ for (const liveCase of liveCopyCases) {
       let clipboardResult = ''
 
       try {
-        await expect
-          .poll(
-            async () => {
-              await page.bringToFront()
-              const clipboardText = await page.evaluate(async () => {
-                return await navigator.clipboard.readText()
-              })
+        const poll = expect.poll(
+          async () => {
+            await page.bringToFront()
+            const clipboardText = await page.evaluate(async () => {
+              return await navigator.clipboard.readText()
+            })
 
-              clipboardResult = clipboardText.trim()
+            clipboardResult = clipboardText.trim()
 
-              return clipboardResult
-            },
-            {
-              timeout: 20 * 1000,
-              intervals: [500, 1000, 2000],
-            },
-          )
-          .toBe(liveCase.expectedText)
+            return clipboardResult
+          },
+          {
+            timeout: 20 * 1000,
+            intervals: [500, 1000, 2000],
+          },
+        )
+
+        if (liveCase.match === 'equals') {
+          await poll.toBe(liveCase.expectedText)
+        } else {
+          await poll.toContain(liveCase.expectedText)
+        }
       } catch {
         throw new Error(
           [
             'copy markdown 验证失败',
+            `验证方式: ${liveCase.match}`,
             `验证内容: ${JSON.stringify(liveCase.expectedText)}`,
             `输出结果: ${JSON.stringify(clipboardResult)}`,
           ].join('\n'),

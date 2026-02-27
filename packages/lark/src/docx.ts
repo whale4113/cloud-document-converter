@@ -110,6 +110,7 @@ interface Attributes {
   italic?: string
   bold?: string
   strikethrough?: string
+  underline?: string
 
   inlineCode?: string
   equation?: string
@@ -812,6 +813,7 @@ export const transformOperationsToPhrasingContents = (
       textHighlight,
       textHighlightBackground,
       mentionUserId,
+      underline,
     } = attributes ?? {}
 
     if (mentionUserId) {
@@ -843,9 +845,18 @@ export const transformOperationsToPhrasingContents = (
     }
 
     if (options.highlight && (textHighlight || textHighlightBackground)) {
+      const highlighted = `<span style="color: ${textHighlight ?? 'inherit'}; background-color: ${textHighlightBackground ?? 'inherit'}">${escape(insert)}</span>`
+
       return {
         type: 'html',
-        value: `<span style="color: ${textHighlight ?? 'inherit'}; background-color: ${textHighlightBackground ?? 'inherit'}">${escape(insert)}</span>`,
+        value: underline ? `<u>${highlighted}</u>` : highlighted,
+      }
+    }
+
+    if (underline) {
+      return {
+        type: 'html',
+        value: `<u>${escape(insert)}</u>`,
       }
     }
 
