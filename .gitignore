@@ -10,3 +10,7 @@ dist
 # turborepo
 .turbo
 
+# playwright
+.cache
+playwright-report
+test-results

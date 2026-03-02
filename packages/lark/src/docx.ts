@@ -45,10 +45,13 @@ declare module 'mdast' {
   }
 
   interface TableData {
+    type?: BlockType.TABLE | BlockType.GRID | undefined
+    colWidths?: number[]
     invalid?: boolean
   }
 
   interface TableCellData {
+    width?: number
     invalidChildren?: mdast.Nodes[]
   }
 
@@ -96,6 +99,7 @@ export enum BlockType {
   TEXT = 'text',
   VIEW = 'view',
   SYNCED_SOURCE = 'synced_source',
+  SYNCED_REFERENCE = 'synced_reference',
   WHITEBOARD = 'whiteboard',
   FALLBACK = 'fallback',
 }
@@ -106,6 +110,7 @@ interface Attributes {
   italic?: string
   bold?: string
   strikethrough?: string
+  underline?: string
 
   inlineCode?: string
   equation?: string
@@ -278,6 +283,10 @@ interface Grid extends Block<GridColumn> {
 
 interface GridColumn extends Block {
   type: BlockType.GRID_COLUMN
+  snapshot: {
+    type: BlockType.GRID_COLUMN
+    width_ratio?: number
+  }
 }
 
 interface Callout extends Block {
@@ -286,6 +295,16 @@ interface Callout extends Block {
 
 interface SyncedSource extends Block {
   type: BlockType.SYNCED_SOURCE
+}
+
+interface SyncedReferenceInnerBlockManager {
+  rootBlockModel?: PageBlock
+}
+
+interface SyncedReference extends Block {
+  type: BlockType.SYNCED_REFERENCE
+  isAllDataReady: boolean
+  innerBlockManager?: SyncedReferenceInnerBlockManager
 }
 
 interface ImageDataWrapper {
@@ -458,6 +477,7 @@ type Blocks =
   | GridColumn
   | Callout
   | SyncedSource
+  | SyncedReference
   | Whiteboard
   | DiagramBlock
   | View
@@ -794,6 +814,7 @@ export const transformOperationsToPhrasingContents = (
       textHighlight,
       textHighlightBackground,
       mentionUserId,
+      underline,
     } = attributes ?? {}
 
     if (mentionUserId) {
@@ -825,9 +846,18 @@ export const transformOperationsToPhrasingContents = (
     }
 
     if (options.highlight && (textHighlight || textHighlightBackground)) {
+      const highlighted = `<span style="color: ${textHighlight ?? 'inherit'}; background-color: ${textHighlightBackground ?? 'inherit'}">${escape(insert)}</span>`
+
       return {
         type: 'html',
-        value: `<span style="color: ${textHighlight ?? 'inherit'}; background-color: ${textHighlightBackground ?? 'inherit'}">${escape(insert)}</span>`,
+        value: underline ? `<u>${highlighted}</u>` : highlighted,
+      }
+    }
+
+    if (underline) {
+      return {
+        type: 'html',
+        value: `<u>${escape(insert)}</u>`,
       }
     }
 
@@ -1082,6 +1112,13 @@ export class Transformer {
 
           if (child.type === BlockType.SYNCED_SOURCE) {
             return flatChildren(child.children)
+          }
+
+          if (child.type === BlockType.SYNCED_REFERENCE) {
+            return flatChildren(
+              child.innerBlockManager?.rootBlockModel?.children ??
+                child.children,
+            )
           }
 
           return child
@@ -1347,7 +1384,11 @@ export class Transformer {
       }
       case BlockType.TABLE:
       case BlockType.GRID: {
-        let table: mdast.Table = { type: 'table', children: [] }
+        let table: mdast.Table = {
+          type: 'table',
+          children: [],
+          data: { type: block.type },
+        }
 
         table = this.transformParentBlock(
           block,
@@ -1355,7 +1396,19 @@ export class Transformer {
           nodes => {
             const tableCells = nodes.filter(isTableCell)
 
+            const widthCells = tableCells.filter(
+              (cell): cell is mdast.TableCell & { data: { width: number } } =>
+                typeof cell.data?.width === 'number',
+            )
+            const colWidths =
+              block.type === BlockType.GRID &&
+              widthCells.length === tableCells.length
+                ? widthCells.map(cell => cell.data.width)
+                : undefined
+
             table.data = {
+              type: block.type,
+              ...(colWidths ? { colWidths } : {}),
               invalid: tableCells.some(cell => cell.data?.invalidChildren),
             }
 
@@ -1381,7 +1434,13 @@ export class Transformer {
       }
       case BlockType.CELL:
       case BlockType.GRID_COLUMN: {
-        const cell: mdast.TableCell = { type: 'tableCell', children: [] }
+        const cell: mdast.TableCell = {
+          type: 'tableCell',
+          children: [],
+          ...(block.type === BlockType.GRID_COLUMN
+            ? { data: { width: block.snapshot.width_ratio } }
+            : {}),
+        }
 
         return this.transformParentBlock(
           block,
@@ -1601,11 +1660,14 @@ export class Docx {
           (block.type === BlockType.FALLBACK &&
             block.snapshot.type === BlockType.WHITEBOARD)
 
+        const isSyncedReferenceReady = (block: Blocks): boolean =>
+          block.type !== BlockType.SYNCED_REFERENCE || block.isAllDataReady
+
         if (checkWhiteboard && isWhiteboard(block)) {
           return prerequisite && block.type !== BlockType.FALLBACK
         }
 
-        return prerequisite
+        return prerequisite && isSyncedReferenceReady(block)
       })
     )
   }

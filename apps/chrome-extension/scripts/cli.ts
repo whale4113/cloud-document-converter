@@ -50,8 +50,12 @@ interface BuildOptions {
 }
 
 const buildScripts = async (options: BuildOptions) => {
+  const packagesPath = path.resolve(dirname, '../../../packages')
+  const srcPath = path.resolve(dirname, '../src')
+
   await tsdownBuild({
-    watch: options.watch,
+    watch: options.watch ? [srcPath, packagesPath] : false,
+    ignoreWatch: ['dist/**', 'node_modules/**'],
     env: {
       DEV: !options.release,
     },

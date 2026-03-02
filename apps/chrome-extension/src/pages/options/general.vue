@@ -26,6 +26,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import {
   SettingKey,
   TableWithNonPhrasingContent,
+  Grid,
   Theme,
 } from '@/common/settings'
 import { useI18n } from 'vue-i18n'
@@ -37,8 +38,8 @@ const schema = z.object({
   [SettingKey.Locale]: z.enum(availableLocales.value),
   [SettingKey.Theme]: z.enum(Theme),
   [SettingKey.TableWithNonPhrasingContent]: z.enum(TableWithNonPhrasingContent),
+  [SettingKey.Grid]: z.enum(Grid),
   [SettingKey.TextHighlight]: z.boolean(),
-  [SettingKey.FlatGrid]: z.boolean(),
 })
 
 const { query, mutation } = useSettings()
@@ -55,8 +56,8 @@ watch(query.data, newValues => {
         SettingKey.Locale,
         SettingKey.Theme,
         SettingKey.TableWithNonPhrasingContent,
+        SettingKey.Grid,
         SettingKey.TextHighlight,
-        SettingKey.FlatGrid,
       ]),
     })
 
@@ -155,6 +156,7 @@ const onSubmit = handleSubmit.withControlled(async values => {
             </Select>
           </Field>
         </VeeField>
+
         <VeeField
           v-slot="{ field, errors }"
           :name="`[${SettingKey.TableWithNonPhrasingContent}]`"
@@ -200,6 +202,48 @@ const onSubmit = handleSubmit.withControlled(async values => {
             </Select>
           </Field>
         </VeeField>
+        <VeeField v-slot="{ field, errors }" :name="`[${SettingKey.Grid}]`">
+          <Field orientation="responsive" :data-invalid="!!errors.length">
+            <FieldContent>
+              <FieldLabel for="form-vee-general-grid">{{
+                t('general.grid')
+              }}</FieldLabel>
+              <FieldError v-if="errors.length" :errors="errors" />
+            </FieldContent>
+            <Skeleton v-if="query.isPending.value" class="h-9 w-40" />
+            <Select
+              v-else
+              :model-value="field.value"
+              @update:model-value="field.onChange"
+            >
+              <SelectTrigger
+                id="form-vee-general-grid"
+                :aria-invalid="!!errors.length"
+              >
+                <SelectValue :placeholder="t('general.grid.placeholder')" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem
+                    :key="`${locale}_${Grid.Flatten}`"
+                    :value="Grid.Flatten"
+                    >{{ t('general.grid.flatten') }}
+                  </SelectItem>
+                  <SelectItem
+                    :key="`${locale}_${Grid.ToTable}`"
+                    :value="Grid.ToTable"
+                    >{{ t('general.grid.to_table') }}
+                  </SelectItem>
+                  <SelectItem
+                    :key="`${locale}_${Grid.ToHTML}`"
+                    :value="Grid.ToHTML"
+                    >{{ t('general.grid.to_html') }}
+                  </SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </Field>
+        </VeeField>
         <VeeField
           v-slot="{ field, errors }"
           :name="`[${SettingKey.TextHighlight}]`"
@@ -215,25 +259,6 @@ const onSubmit = handleSubmit.withControlled(async values => {
             <Switch
               v-else
               id="form-vee-general-text-highlight"
-              :name="field.name"
-              :model-value="field.value"
-              :aria-invalid="!!errors.length"
-              @update:model-value="field.onChange"
-            />
-          </Field>
-        </VeeField>
-        <VeeField v-slot="{ field, errors }" :name="`[${SettingKey.FlatGrid}]`">
-          <Field orientation="horizontal" :data-invalid="!!errors.length">
-            <FieldContent>
-              <FieldLabel for="form-vee-general-flat-grid">{{
-                t('general.flat_grid')
-              }}</FieldLabel>
-              <FieldError v-if="errors.length" :errors="errors" />
-            </FieldContent>
-            <Skeleton v-if="query.isPending.value" class="h-9 w-40" />
-            <Switch
-              v-else
-              id="form-vee-general-flat-grid"
               :name="field.name"
               :model-value="field.value"
               :aria-invalid="!!errors.length"

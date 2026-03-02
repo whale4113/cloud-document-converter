@@ -132,6 +132,90 @@ export const transformInvalidTablesToHtml = (
   })
 }
 
+const isParent = (node: mdast.Node): node is mdast.Parent =>
+  'children' in node && Array.isArray(node.children)
+
+export const transformGridToHtml = (
+  root: mdast.Root,
+  options: { allowDangerousHtml: boolean } = { allowDangerousHtml: false },
+): void => {
+  interface HastNode {
+    type: string
+    tagName?: string
+    properties?: Record<string, unknown>
+    children?: HastNode[]
+  }
+
+  const findTableElement = (node: HastNode): HastNode | null => {
+    if (node.type === 'element' && node.tagName === 'table') return node
+    if (!node.children) return null
+    for (const child of node.children) {
+      const found = findTableElement(child)
+      if (found) return found
+    }
+    return null
+  }
+
+  const normalizeWidthValue = (value: string): string => {
+    if (value.includes('%') || /[a-z]/i.test(value)) return value
+    const numeric = Number(value)
+    if (!Number.isFinite(numeric)) return value
+    return numeric <= 1 ? `${String(numeric * 100)}%` : `${String(numeric)}px`
+  }
+
+  const extractColumnWidths = (table: mdast.Table): string[] | null => {
+    const colWidths = (table.data as { colWidths?: number[] } | undefined)
+      ?.colWidths
+    if (!colWidths || colWidths.length === 0) return null
+    if (table.children.length === 0) return null
+    const columnCount = table.children[0].children.length
+    if (colWidths.length !== columnCount) return null
+    return colWidths.map(value => normalizeWidthValue(String(value)))
+  }
+
+  const visit = (node: mdast.Parent): void => {
+    for (let index = 0; index < node.children.length; index++) {
+      const child = node.children[index]
+      const tableType = (child.data as { type?: string } | undefined)?.type
+      if (child.type === 'table' && tableType === 'grid') {
+        const colWidths = extractColumnWidths(child)
+        const hast = toHast(child, {
+          allowDangerousHtml: options.allowDangerousHtml,
+        }) as HastNode
+        const tableElement = findTableElement(hast)
+        if (tableElement && colWidths) {
+          const colgroup: HastNode = {
+            type: 'element',
+            tagName: 'colgroup',
+            children: colWidths.map(width => ({
+              type: 'element',
+              tagName: 'col',
+              properties: {
+                style: `width: ${width}`,
+              },
+              children: [],
+            })),
+          }
+          tableElement.children = [colgroup, ...(tableElement.children ?? [])]
+        }
+        node.children.splice(index, 1, {
+          type: 'html',
+          value: toHtml(hast as unknown as Parameters<typeof toHtml>[0], {
+            allowDangerousHtml: options.allowDangerousHtml,
+          }),
+        })
+        continue
+      }
+
+      if (isParent(child)) {
+        visit(child)
+      }
+    }
+  }
+
+  visit(root)
+}
+
 export const transformMentionUsers = async (
   mentionUsers: mdast.InlineCode[],
 ): Promise<void> => {

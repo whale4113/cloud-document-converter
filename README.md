@@ -39,8 +39,9 @@ Install Cloud Document Converter from [Chrome Web Store](https://chromewebstore.
 | Image                                 | ✅                | Image                             |
 | Inline Math                           | ✅                | Math Block                        |
 | Call Out                              | ❌                | Blockquote                        |
+| Synced Reference                      | ✅                |                                   |
 | Diagram (Flowcharts and UML diagrams) | ❌                | Image (Download only)             |
-| Grid                                  | ❌                | _Its content is flattened_        |
+| Grid                                  | ✅                | flattened/Table/HTML              |
 | Bitable                               | To be determined |                                   |
 | Chat Card                             | To be determined |                                   |
 | File                                  | ❌                | Link (Download only)              |
@@ -60,7 +61,7 @@ Install Cloud Document Converter from [Chrome Web Store](https://chromewebstore.
 | Link                  | ✅                | Link         |
 | Font Color            | ✅                | HTML         |
 | Font Background Color | ✅                | HTML         |
-| Underline             | To be determined |              |
+| Underline             | ✅                | HTML (`<u>`) |
 
 ## Other
 

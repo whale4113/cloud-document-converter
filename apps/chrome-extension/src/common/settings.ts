@@ -8,9 +8,9 @@ export enum SettingKey {
   Theme = 'general.theme',
   DownloadMethod = 'download.method',
   TableWithNonPhrasingContent = 'general.table_with_non_phrasing_content',
+  Grid = 'general.grid',
   TextHighlight = 'general.text_highlight',
   DownloadFileWithUniqueName = 'download.file_with_unique_name',
-  FlatGrid = 'general.flat_grid',
 }
 
 export enum Theme {
@@ -29,14 +29,20 @@ export enum TableWithNonPhrasingContent {
   ToHTML = 'toHTML',
 }
 
+export enum Grid {
+  Flatten = 'flatten',
+  ToTable = 'toTable',
+  ToHTML = 'toHTML',
+}
+
 export interface Settings {
   [SettingKey.Locale]: string
   [SettingKey.Theme]: (typeof Theme)[keyof typeof Theme]
   [SettingKey.DownloadMethod]: (typeof DownloadMethod)[keyof typeof DownloadMethod]
   [SettingKey.TableWithNonPhrasingContent]: (typeof TableWithNonPhrasingContent)[keyof typeof TableWithNonPhrasingContent]
+  [SettingKey.Grid]: (typeof Grid)[keyof typeof Grid]
   [SettingKey.TextHighlight]: boolean
   [SettingKey.DownloadFileWithUniqueName]: boolean
-  [SettingKey.FlatGrid]: boolean
 }
 
 export const fallbackSettings: Settings = {
@@ -46,9 +52,9 @@ export const fallbackSettings: Settings = {
     ? DownloadMethod.ShowSaveFilePicker
     : DownloadMethod.Direct,
   [SettingKey.TableWithNonPhrasingContent]: TableWithNonPhrasingContent.ToHTML,
+  [SettingKey.Grid]: Grid.Flatten,
   [SettingKey.TextHighlight]: true,
   [SettingKey.DownloadFileWithUniqueName]: false,
-  [SettingKey.FlatGrid]: false,
 }
 
 export const getSettings = async <Key extends keyof Settings>(
