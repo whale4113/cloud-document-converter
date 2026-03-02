@@ -303,6 +303,7 @@ interface SyncedReferenceInnerBlockManager {
 
 interface SyncedReference extends Block {
   type: BlockType.SYNCED_REFERENCE
+  isAllDataReady: boolean
   innerBlockManager?: SyncedReferenceInnerBlockManager
 }
 
@@ -1660,8 +1661,7 @@ export class Docx {
             block.snapshot.type === BlockType.WHITEBOARD)
 
         const isSyncedReferenceReady = (block: Blocks): boolean =>
-          block.type !== BlockType.SYNCED_REFERENCE ||
-          Array.isArray(block.innerBlockManager?.rootBlockModel?.children)
+          block.type !== BlockType.SYNCED_REFERENCE || block.isAllDataReady
 
         if (checkWhiteboard && isWhiteboard(block)) {
           return prerequisite && block.type !== BlockType.FALLBACK
