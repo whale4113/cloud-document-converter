@@ -1,7 +1,7 @@
-import { EventName, sender } from './message'
+import { EventName, portImpl } from './message'
 
 export const log = (...input: unknown[]): void => {
-  sender.send(EventName.Console, input)
+  portImpl.sender.send(EventName.Console, input)
 }
 
 if (import.meta.env.DEV) {

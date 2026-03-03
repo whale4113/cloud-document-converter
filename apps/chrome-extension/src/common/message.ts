@@ -22,12 +22,19 @@ export interface Events extends Record<string, unknown> {
   [EventName.GetSettings]: string[]
 }
 
-export const sender: Port<Events> = /* @__PURE__ */ new Port<Events>(
-  'sender',
-  'receiver',
-)
+class PortImpl {
+  private _sender: Port<Events> | null = null
+  private _receiver: Port<Events> | null = null
 
-export const receiver: Port<Events> = /* @__PURE__ */ new Port<Events>(
-  'receiver',
-  'sender',
-)
+  get sender(): Port<Events> {
+    this._sender ??= new Port<Events>('sender', 'receiver')
+    return this._sender
+  }
+
+  get receiver(): Port<Events> {
+    this._receiver ??= new Port<Events>('receiver', 'sender')
+    return this._receiver
+  }
+}
+
+export const portImpl: PortImpl = /* @__PURE__ */ new PortImpl()

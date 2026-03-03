@@ -10,11 +10,10 @@ import { confirm } from '../common/notification'
 import { legacyFileSave } from '../common/legacy'
 import { reportBug } from '../common/issue'
 import {
-  transformInvalidTablesToHtml,
-  transformGridToHtml,
   transformMentionUsers,
   UniqueFileName,
   withSignal,
+  transformTableWithParents,
 } from '../common/utils'
 import {
   getSettings,
@@ -556,7 +555,7 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
     SettingKey.DownloadFileWithUniqueName,
   ])
 
-  const { root, images, files, invalidTables, mentionUsers } =
+  const { root, images, files, tableWithParents, mentionUsers } =
     docx.intoMarkdownAST({
       whiteboard: true,
       diagram: true,
@@ -582,20 +581,12 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
     })
 
     const singleFileContent = () => {
-      if (
-        settings[SettingKey.TableWithNonPhrasingContent] ===
-        TableWithNonPhrasingContent.ToHTML
-      ) {
-        transformInvalidTablesToHtml(invalidTables, {
-          allowDangerousHtml: true,
-        })
-      }
-
-      if (settings[SettingKey.Grid] === Grid.ToHTML) {
-        transformGridToHtml(root, {
-          allowDangerousHtml: true,
-        })
-      }
+      transformTableWithParents(tableWithParents, {
+        transformGridToHtml: settings[SettingKey.Grid] === Grid.ToHTML,
+        transformInvalidTablesToHtml:
+          settings[SettingKey.TableWithNonPhrasingContent] ===
+          TableWithNonPhrasingContent.ToHTML,
+      })
 
       const markdown = Docx.stringify(root)
 
@@ -658,20 +649,12 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
         zipFs.addBlob(filename, content)
       })
 
-      if (
-        settings[SettingKey.TableWithNonPhrasingContent] ===
-        TableWithNonPhrasingContent.ToHTML
-      ) {
-        transformInvalidTablesToHtml(invalidTables, {
-          allowDangerousHtml: true,
-        })
-      }
-
-      if (settings[SettingKey.Grid] === Grid.ToHTML) {
-        transformGridToHtml(root, {
-          allowDangerousHtml: true,
-        })
-      }
+      transformTableWithParents(tableWithParents, {
+        transformGridToHtml: settings[SettingKey.Grid] === Grid.ToHTML,
+        transformInvalidTablesToHtml:
+          settings[SettingKey.TableWithNonPhrasingContent] ===
+          TableWithNonPhrasingContent.ToHTML,
+      })
 
       const markdown = Docx.stringify(root)
 

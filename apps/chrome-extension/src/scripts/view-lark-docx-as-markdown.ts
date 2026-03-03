@@ -6,9 +6,8 @@ import { CommonTranslationKey, en, Namespace, zh } from '../common/i18n'
 import { confirm } from '../common/notification'
 import { reportBug } from '../common/issue'
 import {
-  transformInvalidTablesToHtml,
-  transformGridToHtml,
   transformMentionUsers,
+  transformTableWithParents,
 } from '../common/utils'
 import {
   getSettings,
@@ -91,10 +90,12 @@ const main = async () => {
     SettingKey.TextHighlight,
   ])
 
-  const { root, images, invalidTables, mentionUsers } = docx.intoMarkdownAST({
-    highlight: settings[SettingKey.TextHighlight],
-    flatGrid: settings[SettingKey.Grid] === Grid.Flatten,
-  })
+  const { root, images, tableWithParents, mentionUsers } = docx.intoMarkdownAST(
+    {
+      highlight: settings[SettingKey.TextHighlight],
+      flatGrid: settings[SettingKey.Grid] === Grid.Flatten,
+    },
+  )
 
   await transformMentionUsers(mentionUsers)
 
@@ -112,20 +113,12 @@ const main = async () => {
     })
     .filter(isDefined)
 
-  if (
-    settings[SettingKey.TableWithNonPhrasingContent] ===
-    TableWithNonPhrasingContent.ToHTML
-  ) {
-    transformInvalidTablesToHtml(invalidTables, {
-      allowDangerousHtml: true,
-    })
-  }
-
-  if (settings[SettingKey.Grid] === Grid.ToHTML) {
-    transformGridToHtml(root, {
-      allowDangerousHtml: true,
-    })
-  }
+  transformTableWithParents(tableWithParents, {
+    transformGridToHtml: settings[SettingKey.Grid] === Grid.ToHTML,
+    transformInvalidTablesToHtml:
+      settings[SettingKey.TableWithNonPhrasingContent] ===
+      TableWithNonPhrasingContent.ToHTML,
+  })
 
   const markdown = Docx.stringify(root)
 

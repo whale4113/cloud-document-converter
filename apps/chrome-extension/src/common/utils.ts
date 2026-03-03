@@ -1,6 +1,12 @@
 import { toHast } from 'mdast-util-to-hast'
 import { toHtml } from 'hast-util-to-html'
-import { Docx, type InvalidTable, type mdast } from '@dolphin/lark'
+import {
+  Docx,
+  type TableWithParent,
+  type mdast,
+  type hast,
+  BlockType,
+} from '@dolphin/lark'
 import { v4 as uuidv4 } from 'uuid'
 import { Second, waitForFunction } from '@dolphin/common'
 
@@ -96,7 +102,7 @@ export class UniqueFileName {
 }
 
 export const transformInvalidTablesToHtml = (
-  invalidTables: InvalidTable[],
+  invalidTables: TableWithParent[],
   options: { allowDangerousHtml: boolean } = { allowDangerousHtml: false },
 ): void => {
   invalidTables.forEach(invalidTable => {
@@ -110,7 +116,6 @@ export const transformInvalidTablesToHtml = (
           toHast(
             {
               ...invalidTable.inner,
-              // @ts-expect-error non-phrasing content can be supported.
               children: invalidTable.inner.children.map(row => ({
                 ...row,
                 children: row.children.map(cell => ({
@@ -118,7 +123,7 @@ export const transformInvalidTablesToHtml = (
                   children: cell.data?.invalidChildren ?? cell.children,
                 })),
               })),
-            },
+            } as mdast.Table,
             {
               allowDangerousHtml: options.allowDangerousHtml,
             },
@@ -132,30 +137,10 @@ export const transformInvalidTablesToHtml = (
   })
 }
 
-const isParent = (node: mdast.Node): node is mdast.Parent =>
-  'children' in node && Array.isArray(node.children)
-
 export const transformGridToHtml = (
-  root: mdast.Root,
+  grids: TableWithParent[],
   options: { allowDangerousHtml: boolean } = { allowDangerousHtml: false },
 ): void => {
-  interface HastNode {
-    type: string
-    tagName?: string
-    properties?: Record<string, unknown>
-    children?: HastNode[]
-  }
-
-  const findTableElement = (node: HastNode): HastNode | null => {
-    if (node.type === 'element' && node.tagName === 'table') return node
-    if (!node.children) return null
-    for (const child of node.children) {
-      const found = findTableElement(child)
-      if (found) return found
-    }
-    return null
-  }
-
   const normalizeWidthValue = (value: string): string => {
     if (value.includes('%') || /[a-z]/i.test(value)) return value
     const numeric = Number(value)
@@ -173,47 +158,59 @@ export const transformGridToHtml = (
     return colWidths.map(value => normalizeWidthValue(String(value)))
   }
 
-  const visit = (node: mdast.Parent): void => {
-    for (let index = 0; index < node.children.length; index++) {
-      const child = node.children[index]
-      const tableType = (child.data as { type?: string } | undefined)?.type
-      if (child.type === 'table' && tableType === 'grid') {
-        const colWidths = extractColumnWidths(child)
-        const hast = toHast(child, {
+  for (const grid of grids) {
+    const gridIndex = grid.parent?.children.findIndex(
+      child => child === grid.inner,
+    )
+    if (gridIndex !== undefined && gridIndex !== -1) {
+      const hast = toHast(
+        grid.inner.data?.invalid
+          ? ({
+              ...grid.inner,
+              children: grid.inner.children.map(row => ({
+                ...row,
+                children: row.children.map(cell => ({
+                  ...cell,
+                  children: cell.data?.invalidChildren ?? cell.children,
+                })),
+              })),
+            } as mdast.Table)
+          : grid.inner,
+        {
           allowDangerousHtml: options.allowDangerousHtml,
-        }) as HastNode
-        const tableElement = findTableElement(hast)
-        if (tableElement && colWidths) {
-          const colgroup: HastNode = {
+        },
+      )
+
+      const colWidths = extractColumnWidths(grid.inner)
+      if (colWidths) {
+        const colgroup: hast.Element = {
+          type: 'element',
+          tagName: 'colgroup',
+          properties: {},
+          children: colWidths.map(width => ({
             type: 'element',
-            tagName: 'colgroup',
-            children: colWidths.map(width => ({
-              type: 'element',
-              tagName: 'col',
-              properties: {
-                style: `width: ${width}`,
-              },
-              children: [],
-            })),
-          }
-          tableElement.children = [colgroup, ...(tableElement.children ?? [])]
+            tagName: 'col',
+            properties: {
+              style: `width: ${width}`,
+            },
+            children: [],
+          })),
         }
-        node.children.splice(index, 1, {
-          type: 'html',
-          value: toHtml(hast as unknown as Parameters<typeof toHtml>[0], {
-            allowDangerousHtml: options.allowDangerousHtml,
-          }),
-        })
-        continue
+        if (hast.type === 'element') {
+          hast.children = ([colgroup] as hast.ElementContent[]).concat(
+            hast.children,
+          )
+        }
       }
 
-      if (isParent(child)) {
-        visit(child)
-      }
+      grid.parent?.children.splice(gridIndex, 1, {
+        type: 'html',
+        value: toHtml(hast, {
+          allowDangerousHtml: options.allowDangerousHtml,
+        }),
+      })
     }
   }
-
-  visit(root)
 }
 
 export const transformMentionUsers = async (
@@ -245,5 +242,39 @@ export const transformMentionUsers = async (
         user.value = '@' + el.innerText
       }
     }
+  }
+}
+
+export interface TransformTableWithParentsOptions {
+  transformGridToHtml: boolean
+  transformInvalidTablesToHtml: boolean
+}
+
+export const transformTableWithParents = (
+  tableWithParents: TableWithParent[],
+  options: TransformTableWithParentsOptions,
+): void => {
+  if (options.transformGridToHtml) {
+    transformGridToHtml(
+      tableWithParents.filter(item => item.inner.data?.type === BlockType.GRID),
+      {
+        allowDangerousHtml: true,
+      },
+    )
+  }
+
+  if (options.transformInvalidTablesToHtml) {
+    transformInvalidTablesToHtml(
+      tableWithParents.filter(
+        item =>
+          item.inner.data?.invalid &&
+          (options.transformGridToHtml
+            ? item.inner.data.type !== BlockType.GRID
+            : true),
+      ),
+      {
+        allowDangerousHtml: true,
+      },
+    )
   }
 }

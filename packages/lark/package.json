@@ -31,7 +31,8 @@
   },
   "devDependencies": {
     "@types/lodash-es": "catalog:types",
-    "@types/mdast": "catalog:types"
+    "@types/mdast": "catalog:types",
+    "@types/hast": "catalog:types"
   },
   "dependencies": {
     "@dolphin/common": "workspace:^",

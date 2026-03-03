@@ -1,7 +1,7 @@
 import { pick } from 'es-toolkit'
 import { defaultsDeep } from 'es-toolkit/compat'
 import { supported } from 'browser-fs-access'
-import { EventName, sender } from './message'
+import { EventName, portImpl } from './message'
 
 export enum SettingKey {
   Locale = 'general.locale',
@@ -61,7 +61,10 @@ export const getSettings = async <Key extends keyof Settings>(
   keys: Key[],
 ): Promise<Pick<Settings, Key>> => {
   try {
-    const settings = await sender.sendAsync(EventName.GetSettings, keys)
+    const settings = await portImpl.sender.sendAsync(
+      EventName.GetSettings,
+      keys,
+    )
     return pick(defaultsDeep(settings, fallbackSettings), keys)
   } catch (error) {
     console.error(error)

@@ -45,7 +45,7 @@ declare module 'mdast' {
   }
 
   interface TableData {
-    type?: BlockType.TABLE | BlockType.GRID | undefined
+    type?: BlockType.TABLE | BlockType.GRID
     colWidths?: number[]
     invalid?: boolean
   }
@@ -1028,7 +1028,7 @@ interface TransformerOptions {
   locateBlockWithRecordId?: (recordId: string) => Promise<boolean>
 }
 
-export interface InvalidTable {
+export interface TableWithParent {
   inner: mdast.Table
   parent: mdast.Parent | null
 }
@@ -1036,7 +1036,7 @@ export interface InvalidTable {
 interface TransformResult<T> {
   root: T
   images: mdast.Image[]
-  invalidTables: InvalidTable[]
+  tableWithParents: TableWithParent[]
   files: mdast.Link[]
   mentionUsers: mdast.InlineCode[]
 }
@@ -1045,7 +1045,7 @@ export class Transformer {
   private parent: mdast.Parent | null = null
   private images: mdast.Image[] = []
   private mentionUsers: mdast.InlineCode[] = []
-  private invalidTables: InvalidTable[] = []
+  private tableWithParents: TableWithParent[] = []
   /**
    * Resource link to file.
    */
@@ -1407,6 +1407,7 @@ export class Transformer {
                 : undefined
 
             table.data = {
+              ...table.data,
               type: block.type,
               ...(colWidths ? { colWidths } : {}),
               invalid: tableCells.some(cell => cell.data?.invalidChildren),
@@ -1423,12 +1424,10 @@ export class Transformer {
           },
         )
 
-        if (table.data?.invalid) {
-          this.invalidTables.push({
-            inner: table,
-            parent: this.parent,
-          })
-        }
+        this.tableWithParents.push({
+          inner: table,
+          parent: this.parent,
+        })
 
         return table
       }
@@ -1473,6 +1472,7 @@ export class Transformer {
             }
 
             cell.data = {
+              ...cell.data,
               invalidChildren: normalizedNodes,
             }
 
@@ -1558,7 +1558,7 @@ export class Transformer {
     const result: TransformResult<Mutate<T>> = {
       root: node,
       images: this.images,
-      invalidTables: this.invalidTables,
+      tableWithParents: this.tableWithParents,
       files: this.files,
       mentionUsers: this.mentionUsers,
     }
@@ -1566,7 +1566,7 @@ export class Transformer {
     this.parent = null
 
     this.images = []
-    this.invalidTables = []
+    this.tableWithParents = []
     this.files = []
     this.mentionUsers = []
 
@@ -1696,7 +1696,7 @@ export class Docx {
       return {
         root: { type: 'root', children: [] },
         images: [],
-        invalidTables: [],
+        tableWithParents: [],
         files: [],
         mentionUsers: [],
       }
