@@ -1,5 +1,11 @@
 # @dolphin/lark
 
+## 2.6.3
+
+### Patch Changes
+
+- [#115](https://github.com/whale4113/cloud-document-converter/pull/115) [`5c5b24b`](https://github.com/whale4113/cloud-document-converter/commit/5c5b24bdf6729d46de9575c7dd5e4ca5bbb1fa78) Thanks [@jiyee](https://github.com/jiyee)! - feat: support synced reference block and underline text
+
 ## 2.6.2
 
 ### Patch Changes
