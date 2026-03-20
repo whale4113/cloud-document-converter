@@ -1,5 +1,12 @@
 # @dolphin/chrome-extension
 
+## 1.10.6
+
+### Patch Changes
+
+- Updated dependencies [[`67654b0`](https://github.com/whale4113/cloud-document-converter/commit/67654b0958eca241f5b55472283be5513a2dcb2c)]:
+  - @dolphin/lark@2.6.4
+
 ## 1.10.4
 
 ### Patch Changes
