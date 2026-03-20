@@ -8,6 +8,7 @@ import {
   waitForFunction,
   OneHundred,
   Second,
+  checkCanvasDimensions,
 } from '@dolphin/common'
 import { toMarkdown, type Options } from 'mdast-util-to-markdown'
 import { gfmStrikethroughToMarkdown } from 'mdast-util-gfm-strikethrough'
@@ -318,14 +319,41 @@ interface RatioApp {
       i: 24,
       o: [''],
       r: false,
-      n: 2,
+      n: number,
     ) => Promise<ImageDataWrapper | null>
+  }
+  app?: {
+    application: {
+      nodeManager: {
+        getNodesBounds: () => {
+          minX: number
+          maxX: number
+          minY: number
+          maxY: number
+        }
+      }
+    }
+    renderManager: {
+      getImageOffscreenCanvas: (
+        bounds: {
+          minX: number
+          maxX: number
+          minY: number
+          maxY: number
+        },
+        r: number,
+        bgColor: string,
+      ) => HTMLCanvasElement | null
+    }
   }
 }
 
 interface WhiteboardBlock {
   isolateEnv: {
     hasRatioApp: () => boolean
+    getRatioApp: () => RatioApp
+  }
+  abilityKit: {
     getRatioApp: () => RatioApp
   }
 }
@@ -910,27 +938,54 @@ const fetchImageSources = (imageBlock: ImageBlock) =>
       .catch(reject)
   })
 
-const whiteboardToImageData = async (
+const whiteboardToBlob = async (
   whiteboard: Whiteboard,
-): Promise<ImageDataWrapper | null> => {
+): Promise<Blob | null> => {
   if (!whiteboard.whiteboardBlock) return null
 
-  const { isolateEnv } = whiteboard.whiteboardBlock
+  const padding = 24
+  const ratio = window.devicePixelRatio
+  const backgroundColor = '#ffffff'
 
-  if (!isolateEnv.hasRatioApp()) return null
+  let rationApp = whiteboard.whiteboardBlock.abilityKit.getRatioApp()
 
-  const rationApp = isolateEnv.getRatioApp()
+  if (rationApp.app) {
+    const bounds = rationApp.app.application.nodeManager.getNodesBounds()
+    bounds.maxX += padding
+    bounds.minX -= padding
+    bounds.maxY += padding
+    bounds.minY -= padding
 
-  const imageData = await rationApp.ratioAppProxy.getOriginImageDataByNodeId(
-    24,
-    [''],
-    false,
-    2,
-  )
+    const canvas = rationApp.app.renderManager.getImageOffscreenCanvas(
+      bounds,
+      ratio,
+      backgroundColor,
+    )
 
-  if (!imageData) return null
+    if (!canvas) return null
 
-  return imageData
+    return new Promise(resolve => {
+      checkCanvasDimensions(canvas)
+
+      canvas.toBlob(resolve)
+    })
+  }
+
+  rationApp = whiteboard.whiteboardBlock.isolateEnv.getRatioApp()
+
+  const imageDataWrapper =
+    await rationApp.ratioAppProxy.getOriginImageDataByNodeId(
+      padding,
+      [''],
+      false,
+      ratio,
+    )
+
+  if (!imageDataWrapper) return null
+
+  return await imageDataToBlob(imageDataWrapper.data, {
+    onDispose: imageDataWrapper.release,
+  })
 }
 
 const diagramToSVGElement = (diagram: DiagramBlock): SVGElement | null => {
@@ -1321,12 +1376,7 @@ export class Transformer {
                   console.error(error)
                 }
 
-                const imageDataWrapper = await whiteboardToImageData(whiteboard)
-                if (!imageDataWrapper) return null
-
-                return await imageDataToBlob(imageDataWrapper.data, {
-                  onDispose: imageDataWrapper.release,
-                })
+                return await whiteboardToBlob(whiteboard)
               },
             },
           }
