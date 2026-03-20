@@ -80,7 +80,7 @@ catalogs:
   tools:
     '@playwright/test': ^1.56.1
     vue-tsc: ^3.1.0
-    web-ext: 8.9.0
+    web-ext: 10.0.0
   types:
     '@types/hast': ^3.0.4
     '@types/lodash-es': ^4.17.12
