@@ -35,7 +35,7 @@
     "@types/hast": "catalog:types"
   },
   "dependencies": {
-    "@dolphin/common": "workspace:^",
+    "@dolphin/common": "workspace:*",
     "js-base64": "catalog:prod",
     "lodash-es": "catalog:utils",
     "mdast-util-gfm-strikethrough": "catalog:prod",

@@ -31,8 +31,8 @@
   },
   "dependencies": {
     "@babel/runtime": "catalog:prod",
-    "@dolphin/common": "workspace:^",
-    "@dolphin/lark": "workspace:^",
+    "@dolphin/common": "workspace:*",
+    "@dolphin/lark": "workspace:*",
     "@tanstack/vue-query": "catalog:prod",
     "@vee-validate/zod": "catalog:prod",
     "@vueuse/core": "catalog:prod",
