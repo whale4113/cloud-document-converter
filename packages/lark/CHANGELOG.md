@@ -1,5 +1,11 @@
 # @dolphin/lark
 
+## 2.6.4
+
+### Patch Changes
+
+- [#123](https://github.com/whale4113/cloud-document-converter/pull/123) [`67654b0`](https://github.com/whale4113/cloud-document-converter/commit/67654b0958eca241f5b55472283be5513a2dcb2c) Thanks [@whale4113](https://github.com/whale4113)! - fix: whiteboard export failed
+
 ## 2.6.3
 
 ### Patch Changes
