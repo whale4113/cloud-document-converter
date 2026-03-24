@@ -303,31 +303,21 @@ export const resolveMergedTablesFromDom = async (
   }
 }
 
-const cellContentToMarkdown = (cell: mdast.TableCell): string => {
+const cellContentToHtml = (cell: mdast.TableCell): string => {
   const children = cell.data?.invalidChildren ?? cell.children
   if (children.length === 0) return ''
 
-  const root: mdast.Root = {
-    type: 'root',
-    children: children.map(child => {
-      if (
-        child.type === 'text' ||
-        child.type === 'emphasis' ||
-        child.type === 'strong' ||
-        child.type === 'inlineCode' ||
-        child.type === 'delete' ||
-        child.type === 'link' ||
-        child.type === 'image' ||
-        child.type === 'html' ||
-        child.type === 'break'
-      ) {
-        return { type: 'paragraph', children: [child] } as mdast.Paragraph
-      }
-      return child as mdast.RootContent
-    }),
+  const paragraph: mdast.Paragraph = {
+    type: 'paragraph',
+    children: children as mdast.PhrasingContent[],
   }
 
-  return Docx.stringify(root).trim()
+  return toHtml(toHast(paragraph, { allowDangerousHtml: true }), {
+    allowDangerousHtml: true,
+  })
+    .replace(/^<p>/, '')
+    .replace(/<\/p>\s*$/, '')
+    .trim()
 }
 
 export const transformMergedTablesToHtml = (
@@ -358,18 +348,8 @@ export const transformMergedTablesToHtml = (
         if (colSpan > 1) attrs.push(`colspan="${String(colSpan)}"`)
 
         const attrStr = attrs.length > 0 ? ' ' + attrs.join(' ') : ''
-        const content = cellContentToMarkdown(cell)
-        const isMultiline = content.includes('\n')
-
-        if (isMultiline) {
-          lines.push(`<td${attrStr}>`)
-          lines.push('')
-          lines.push(content)
-          lines.push('')
-          lines.push('</td>')
-        } else {
-          lines.push(`<td${attrStr}>${content}</td>`)
-        }
+        const content = cellContentToHtml(cell)
+        lines.push(`<td${attrStr}>${content}</td>`)
       }
 
       lines.push('</tr>')
