@@ -49,11 +49,16 @@ declare module 'mdast' {
     type?: BlockType.TABLE | BlockType.GRID
     colWidths?: number[]
     invalid?: boolean
+    mergeInfo?: { rowSpan: number; colSpan: number }[]
+    recordId?: string
+    cellBlockIds?: number[]
   }
 
   interface TableCellData {
     width?: number
     invalidChildren?: mdast.Nodes[]
+    rowSpan?: number
+    colSpan?: number
   }
 
   interface InlineCodeData {
@@ -265,12 +270,18 @@ interface ImageBlock extends Block {
   }
 }
 
+interface MergeInfo {
+  row_span: number
+  col_span: number
+}
+
 interface TableBlock extends Block<TableCellBlock> {
   type: BlockType.TABLE
   snapshot: {
     type: BlockType.TABLE
     rows_id: string[]
     columns_id: string[]
+    merge_info?: MergeInfo[]
   }
 }
 
@@ -1120,6 +1131,21 @@ export class Transformer {
     },
   ) {}
 
+  private resolveMergeInfo(
+    block: TableBlock | Grid,
+  ): { rowSpan: number; colSpan: number }[] | undefined {
+    if (block.type !== BlockType.TABLE) return undefined
+
+    if (block.snapshot.merge_info) {
+      return block.snapshot.merge_info.map(info => ({
+        rowSpan: info.row_span,
+        colSpan: info.col_span,
+      }))
+    }
+
+    return undefined
+  }
+
   private normalizeImage(image: mdast.Image): mdast.Image | mdast.Paragraph {
     return this.parent?.type === 'tableCell'
       ? image
@@ -1434,6 +1460,8 @@ export class Transformer {
       }
       case BlockType.TABLE:
       case BlockType.GRID: {
+        const mergeInfo = this.resolveMergeInfo(block)
+
         let table: mdast.Table = {
           type: 'table',
           children: [],
@@ -1456,11 +1484,35 @@ export class Transformer {
                 ? widthCells.map(cell => cell.data.width)
                 : undefined
 
+            if (mergeInfo && mergeInfo.length === tableCells.length) {
+              tableCells.forEach((cell, i) => {
+                cell.data = {
+                  ...cell.data,
+                  rowSpan: mergeInfo[i].rowSpan,
+                  colSpan: mergeInfo[i].colSpan,
+                }
+              })
+            }
+
+            const hasMergedCells =
+              mergeInfo?.some(info => info.rowSpan > 1 || info.colSpan > 1) ??
+              false
+
+            const cellBlockIds =
+              block.type === BlockType.TABLE
+                ? block.children.map(child => child.id)
+                : undefined
+            const recordId =
+              block.type === BlockType.TABLE ? block.record?.id : undefined
+
             table.data = {
               ...table.data,
               type: block.type,
               ...(colWidths ? { colWidths } : {}),
               invalid: tableCells.some(cell => cell.data?.invalidChildren),
+              ...(hasMergedCells ? { mergeInfo } : {}),
+              ...(cellBlockIds ? { cellBlockIds } : {}),
+              ...(recordId ? { recordId } : {}),
             }
 
             return (

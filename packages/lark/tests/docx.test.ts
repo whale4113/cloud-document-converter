@@ -1467,6 +1467,206 @@ describe('trim end enter', () => {
   })
 })
 
+describe('table with merge_info', () => {
+  test('passes mergeInfo to table data when merge_info exists', () => {
+    const { root, tableWithParents } = transformer.transform({
+      type: BlockType.PAGE,
+      snapshot: {
+        type: BlockType.PAGE,
+      },
+      children: [
+        {
+          type: BlockType.TABLE,
+          snapshot: {
+            type: BlockType.TABLE,
+            rows_id: ['r1', 'r2'],
+            columns_id: ['c1', 'c2'],
+            merge_info: [
+              { row_span: 1, col_span: 1 },
+              { row_span: 1, col_span: 1 },
+              { row_span: 1, col_span: 1 },
+              { row_span: 1, col_span: 1 },
+            ],
+          },
+          children: [
+            {
+              type: BlockType.CELL,
+              snapshot: { type: BlockType.CELL },
+              zoneState: {
+                allText: '',
+                content: { ops: [{ insert: 'A', attributes: {} }] },
+              },
+              children: [],
+            },
+            {
+              type: BlockType.CELL,
+              snapshot: { type: BlockType.CELL },
+              zoneState: {
+                allText: '',
+                content: { ops: [{ insert: 'B', attributes: {} }] },
+              },
+              children: [],
+            },
+            {
+              type: BlockType.CELL,
+              snapshot: { type: BlockType.CELL },
+              zoneState: {
+                allText: '',
+                content: { ops: [{ insert: 'C', attributes: {} }] },
+              },
+              children: [],
+            },
+            {
+              type: BlockType.CELL,
+              snapshot: { type: BlockType.CELL },
+              zoneState: {
+                allText: '',
+                content: { ops: [{ insert: 'D', attributes: {} }] },
+              },
+              children: [],
+            },
+          ],
+        },
+      ],
+    })
+
+    expect(tableWithParents).toHaveLength(1)
+    expect(root.children).toHaveLength(1)
+
+    const table = tableWithParents[0].inner
+    expect(table.data?.mergeInfo).toBeUndefined()
+    expect(table.children).toHaveLength(2)
+    expect(table.children[0].children).toHaveLength(2)
+    expect(table.children[1].children).toHaveLength(2)
+  })
+
+  test('sets mergeInfo on table data when cells have rowspan/colspan > 1', () => {
+    const { tableWithParents } = transformer.transform({
+      type: BlockType.PAGE,
+      snapshot: {
+        type: BlockType.PAGE,
+      },
+      children: [
+        {
+          type: BlockType.TABLE,
+          snapshot: {
+            type: BlockType.TABLE,
+            rows_id: ['r1', 'r2'],
+            columns_id: ['c1', 'c2'],
+            merge_info: [
+              { row_span: 2, col_span: 1 },
+              { row_span: 1, col_span: 1 },
+              { row_span: 0, col_span: 0 },
+              { row_span: 1, col_span: 1 },
+            ],
+          },
+          children: [
+            {
+              type: BlockType.CELL,
+              snapshot: { type: BlockType.CELL },
+              zoneState: {
+                allText: '',
+                content: { ops: [{ insert: 'merged', attributes: {} }] },
+              },
+              children: [],
+            },
+            {
+              type: BlockType.CELL,
+              snapshot: { type: BlockType.CELL },
+              zoneState: {
+                allText: '',
+                content: { ops: [{ insert: 'B', attributes: {} }] },
+              },
+              children: [],
+            },
+            {
+              type: BlockType.CELL,
+              snapshot: { type: BlockType.CELL },
+              zoneState: {
+                allText: '',
+                content: { ops: [] },
+              },
+              children: [],
+            },
+            {
+              type: BlockType.CELL,
+              snapshot: { type: BlockType.CELL },
+              zoneState: {
+                allText: '',
+                content: { ops: [{ insert: 'D', attributes: {} }] },
+              },
+              children: [],
+            },
+          ],
+        },
+      ],
+    })
+
+    expect(tableWithParents).toHaveLength(1)
+
+    const table = tableWithParents[0].inner
+    expect(table.type).toBe('table')
+    expect(table.data?.mergeInfo).toStrictEqual([
+      { rowSpan: 2, colSpan: 1 },
+      { rowSpan: 1, colSpan: 1 },
+      { rowSpan: 0, colSpan: 0 },
+      { rowSpan: 1, colSpan: 1 },
+    ])
+
+    const cell0 = table.children[0].children[0]
+    expect(cell0.data?.rowSpan).toBe(2)
+    expect(cell0.data?.colSpan).toBe(1)
+
+    const cell2 = table.children[1].children[0]
+    expect(cell2.data?.rowSpan).toBe(0)
+    expect(cell2.data?.colSpan).toBe(0)
+  })
+
+  test('no mergeInfo when merge_info is absent from snapshot', () => {
+    const { tableWithParents } = transformer.transform({
+      type: BlockType.PAGE,
+      snapshot: {
+        type: BlockType.PAGE,
+      },
+      children: [
+        {
+          type: BlockType.TABLE,
+          snapshot: {
+            type: BlockType.TABLE,
+            rows_id: ['r1'],
+            columns_id: ['c1', 'c2'],
+          },
+          children: [
+            {
+              type: BlockType.CELL,
+              snapshot: { type: BlockType.CELL },
+              zoneState: {
+                allText: '',
+                content: { ops: [{ insert: 'A', attributes: {} }] },
+              },
+              children: [],
+            },
+            {
+              type: BlockType.CELL,
+              snapshot: { type: BlockType.CELL },
+              zoneState: {
+                allText: '',
+                content: { ops: [{ insert: 'B', attributes: {} }] },
+              },
+              children: [],
+            },
+          ],
+        },
+      ],
+    })
+
+    expect(tableWithParents).toHaveLength(1)
+    const table = tableWithParents[0].inner
+    expect(table.type).toBe('table')
+    expect(table.data?.mergeInfo).toBeUndefined()
+  })
+})
+
 describe('inline math', () => {
   test('inline equation with a single character', () => {
     expect(

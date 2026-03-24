@@ -213,6 +213,177 @@ export const transformGridToHtml = (
   }
 }
 
+const readMergeInfoFromDom = (
+  cellBlockIds: number[],
+): { rowSpan: number; colSpan: number }[] | null => {
+  const result: { rowSpan: number; colSpan: number }[] = []
+  let hasAnyMerge = false
+  let missingCount = 0
+
+  for (const id of cellBlockIds) {
+    const td = document.querySelector<HTMLTableCellElement>(
+      `td[data-block-id="${String(id)}"]`,
+    )
+
+    if (!td) {
+      missingCount++
+      result.push({ rowSpan: 1, colSpan: 1 })
+      continue
+    }
+
+    if (td.style.display === 'none') {
+      result.push({ rowSpan: 0, colSpan: 0 })
+      continue
+    }
+
+    const rowSpan = td.rowSpan
+    const colSpan = td.colSpan
+    result.push({ rowSpan, colSpan })
+    if (rowSpan > 1 || colSpan > 1) hasAnyMerge = true
+  }
+
+  if (missingCount === cellBlockIds.length) return null
+  return hasAnyMerge ? result : null
+}
+
+interface TableDataWithBlockInfo {
+  recordId?: string
+  cellBlockIds?: number[]
+  mergeInfo?: { rowSpan: number; colSpan: number }[]
+  type?: string
+}
+
+export const resolveMergedTablesFromDom = async (
+  tableWithParents: TableWithParent[],
+): Promise<void> => {
+  for (const entry of tableWithParents) {
+    const table = entry.inner
+    const data = table.data as TableDataWithBlockInfo | undefined
+    if (data?.mergeInfo) continue
+    if (data?.type !== BlockType.TABLE) continue
+
+    const cellBlockIds = data.cellBlockIds
+    if (!cellBlockIds || cellBlockIds.length === 0) continue
+
+    let mergeInfo = readMergeInfoFromDom(cellBlockIds)
+
+    if (!mergeInfo && data.recordId) {
+      try {
+        await waitForFunction(
+          () =>
+            Docx.locateBlockWithRecordId(data.recordId ?? '').then(
+              isSuccess =>
+                isSuccess &&
+                document.querySelector(
+                  `td[data-block-id="${String(cellBlockIds[0])}"]`,
+                ) !== null,
+            ),
+          { timeout: 3 * Second },
+        )
+        mergeInfo = readMergeInfoFromDom(cellBlockIds)
+      } catch {
+        continue
+      }
+    }
+
+    if (!mergeInfo) continue
+
+    table.data = { ...table.data, mergeInfo }
+
+    const allCells = table.children.flatMap(row => row.children)
+    if (mergeInfo.length === allCells.length) {
+      allCells.forEach((cell, i) => {
+        cell.data = {
+          ...cell.data,
+          rowSpan: mergeInfo[i].rowSpan,
+          colSpan: mergeInfo[i].colSpan,
+        }
+      })
+    }
+  }
+}
+
+const cellContentToMarkdown = (cell: mdast.TableCell): string => {
+  const children = cell.data?.invalidChildren ?? cell.children
+  if (children.length === 0) return ''
+
+  const root: mdast.Root = {
+    type: 'root',
+    children: children.map(child => {
+      if (
+        child.type === 'text' ||
+        child.type === 'emphasis' ||
+        child.type === 'strong' ||
+        child.type === 'inlineCode' ||
+        child.type === 'delete' ||
+        child.type === 'link' ||
+        child.type === 'image' ||
+        child.type === 'html' ||
+        child.type === 'break'
+      ) {
+        return { type: 'paragraph', children: [child] } as mdast.Paragraph
+      }
+      return child as mdast.RootContent
+    }),
+  }
+
+  return Docx.stringify(root).trim()
+}
+
+export const transformMergedTablesToHtml = (
+  mergedTables: TableWithParent[],
+): void => {
+  for (const entry of mergedTables) {
+    const tableIndex = entry.parent?.children.findIndex(
+      child => child === entry.inner,
+    )
+    if (tableIndex === undefined || tableIndex === -1) continue
+
+    const table = entry.inner
+    const rows = table.children
+
+    const lines: string[] = ['<table>']
+
+    for (const row of rows) {
+      lines.push('<tr>')
+
+      for (const cell of row.children) {
+        const rowSpan = cell.data?.rowSpan ?? 1
+        const colSpan = cell.data?.colSpan ?? 1
+
+        if (rowSpan === 0 || colSpan === 0) continue
+
+        const attrs: string[] = []
+        if (rowSpan > 1) attrs.push(`rowspan="${String(rowSpan)}"`)
+        if (colSpan > 1) attrs.push(`colspan="${String(colSpan)}"`)
+
+        const attrStr = attrs.length > 0 ? ' ' + attrs.join(' ') : ''
+        const content = cellContentToMarkdown(cell)
+        const isMultiline = content.includes('\n')
+
+        if (isMultiline) {
+          lines.push(`<td${attrStr}>`)
+          lines.push('')
+          lines.push(content)
+          lines.push('')
+          lines.push('</td>')
+        } else {
+          lines.push(`<td${attrStr}>${content}</td>`)
+        }
+      }
+
+      lines.push('</tr>')
+    }
+
+    lines.push('</table>')
+
+    entry.parent?.children.splice(tableIndex, 1, {
+      type: 'html',
+      value: lines.join('\n'),
+    })
+  }
+}
+
 export const transformMentionUsers = async (
   mentionUsers: mdast.InlineCode[],
 ): Promise<void> => {
@@ -254,6 +425,10 @@ export const transformTableWithParents = (
   tableWithParents: TableWithParent[],
   options: TransformTableWithParentsOptions,
 ): void => {
+  transformMergedTablesToHtml(
+    tableWithParents.filter(item => item.inner.data?.mergeInfo),
+  )
+
   if (options.transformGridToHtml) {
     transformGridToHtml(
       tableWithParents.filter(item => item.inner.data?.type === BlockType.GRID),

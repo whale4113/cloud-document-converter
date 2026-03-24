@@ -14,6 +14,7 @@ import {
   UniqueFileName,
   withSignal,
   transformTableWithParents,
+  resolveMergedTablesFromDom,
 } from '../common/utils'
 import {
   getSettings,
@@ -565,6 +566,7 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
     })
 
   await transformMentionUsers(mentionUsers)
+  await resolveMergedTablesFromDom(tableWithParents)
 
   const recommendName = docx.pageTitle
     ? normalizeFileName(docx.pageTitle.slice(0, OneHundred))

@@ -8,6 +8,7 @@ import { reportBug } from '../common/issue'
 import {
   transformMentionUsers,
   transformTableWithParents,
+  resolveMergedTablesFromDom,
 } from '../common/utils'
 import {
   getSettings,
@@ -98,6 +99,7 @@ const main = async () => {
   )
 
   await transformMentionUsers(mentionUsers)
+  await resolveMergedTablesFromDom(tableWithParents)
 
   const tokens = images
     .map(image => {
