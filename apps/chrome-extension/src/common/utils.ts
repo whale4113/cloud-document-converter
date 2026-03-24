@@ -303,6 +303,14 @@ export const resolveMergedTablesFromDom = async (
   }
 }
 
+const wrapConsecutiveImages = (html: string): string =>
+  html.replace(/(<img\b[^>]*>)(\s*<img\b[^>]*>)+/g, match => {
+    const imgs = match.match(/<img\b[^>]*>/g)
+    if (!imgs || imgs.length < 2) return match
+    const ths = imgs.map(img => `<th>${img}</th>`).join('')
+    return `<table><thead><tr>${ths}</tr></thead></table>`
+  })
+
 const cellContentToHtml = (cell: mdast.TableCell): string => {
   const children = cell.data?.invalidChildren ?? cell.children
   if (children.length === 0) return ''
@@ -312,12 +320,14 @@ const cellContentToHtml = (cell: mdast.TableCell): string => {
     children: children as mdast.PhrasingContent[],
   }
 
-  return toHtml(toHast(paragraph, { allowDangerousHtml: true }), {
+  const html = toHtml(toHast(paragraph, { allowDangerousHtml: true }), {
     allowDangerousHtml: true,
   })
     .replace(/^<p>/, '')
     .replace(/<\/p>\s*$/, '')
     .trim()
+
+  return wrapConsecutiveImages(html)
 }
 
 export const transformMergedTablesToHtml = (
