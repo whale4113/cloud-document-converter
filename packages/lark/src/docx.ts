@@ -1,5 +1,5 @@
 import type * as mdast from 'mdast'
-import chunk from 'lodash-es/chunk'
+import { chunk } from 'es-toolkit/array'
 import {
   toBlob as svgToBlob,
   imageDataToBlob,
@@ -25,8 +25,9 @@ import {
   isListItemContent,
 } from './utils/mdast'
 import { resolveFileDownloadUrl } from './file'
-import isString from 'lodash-es/isString'
-import escape from 'lodash-es/escape'
+import { isString } from 'es-toolkit/compat'
+import { escape } from 'es-toolkit/compat'
+import { toCamelCaseKeys } from 'es-toolkit/object'
 
 declare module 'mdast' {
   interface ImageData {
@@ -49,11 +50,14 @@ declare module 'mdast' {
     type?: BlockType.TABLE | BlockType.GRID
     colWidths?: number[]
     invalid?: boolean
+    cellSet?: Record<string, CellData>
   }
 
   interface TableCellData {
     width?: number
     invalidChildren?: mdast.Nodes[]
+    rowSpan?: number
+    colSpan?: number
   }
 
   interface InlineCodeData {
@@ -265,17 +269,33 @@ interface ImageBlock extends Block {
   }
 }
 
+interface MergeInfo {
+  row_span: number
+  col_span: number
+}
+
+interface ColumnData {
+  column_width: number
+}
+
+interface CellData {
+  merge_info: MergeInfo
+}
+
 interface TableBlock extends Block<TableCellBlock> {
   type: BlockType.TABLE
   snapshot: {
     type: BlockType.TABLE
     rows_id: string[]
     columns_id: string[]
+    column_set: Record<string, ColumnData>
+    cell_set: Record<string, CellData>
   }
 }
 
 interface TableCellBlock extends Block {
   type: BlockType.CELL
+  cellId: string
 }
 
 interface Grid extends Block<GridColumn> {
@@ -1437,7 +1457,12 @@ export class Transformer {
         let table: mdast.Table = {
           type: 'table',
           children: [],
-          data: { type: block.type },
+          data: {
+            type: block.type,
+            ...(block.type === BlockType.TABLE
+              ? { cellSet: block.snapshot.cell_set }
+              : {}),
+          },
         }
 
         table = this.transformParentBlock(
@@ -1451,10 +1476,13 @@ export class Transformer {
                 typeof cell.data?.width === 'number',
             )
             const colWidths =
-              block.type === BlockType.GRID &&
-              widthCells.length === tableCells.length
-                ? widthCells.map(cell => cell.data.width)
-                : undefined
+              block.type === BlockType.GRID
+                ? widthCells.length === tableCells.length
+                  ? widthCells.map(cell => cell.data.width)
+                  : undefined
+                : block.snapshot.columns_id.map(
+                    id => block.snapshot.column_set[id].column_width,
+                  )
 
             table.data = {
               ...table.data,
@@ -1488,7 +1516,14 @@ export class Transformer {
           children: [],
           ...(block.type === BlockType.GRID_COLUMN
             ? { data: { width: block.snapshot.width_ratio } }
-            : {}),
+            : {
+                data: {
+                  ...toCamelCaseKeys(
+                    (this.parent as mdast.Table).data?.cellSet?.[block.cellId]
+                      ?.merge_info,
+                  ),
+                },
+              }),
         }
 
         return this.transformParentBlock(
