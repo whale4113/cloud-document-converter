@@ -9,6 +9,12 @@ import {
 } from '@dolphin/lark'
 import { v4 as uuidv4 } from 'uuid'
 import { Second, waitForFunction } from '@dolphin/common'
+import {
+  SettingKey,
+  Table as TableSetting,
+  Grid as GridSetting,
+  type Settings,
+} from './settings'
 
 interface Ref<T> {
   current: T
@@ -101,33 +107,66 @@ export class UniqueFileName {
   }
 }
 
-export const transformInvalidTablesToHtml = (
-  invalidTables: TableWithParent[],
+export const mapTableBySettings = (
+  tables: TableWithParent[],
+  settings: Pick<Settings, SettingKey.Table>,
+): TableWithParent[] => {
+  if (settings[SettingKey.Table] === TableSetting.Filtered) {
+    return []
+  }
+
+  return tables
+    .map(table => {
+      if (!table.inner.data?.invalid) return table
+
+      const tableIndex = table.parent?.children.findIndex(
+        child => child === table.inner,
+      )
+
+      if (tableIndex !== undefined && tableIndex !== -1) {
+        const inner = {
+          ...table.inner,
+          children: table.inner.children.map(row => ({
+            ...row,
+            children: row.children.map(cell => ({
+              ...cell,
+              children: cell.data?.invalidChildren ?? cell.children,
+            })),
+          })),
+        } as mdast.Table
+
+        table.parent?.children.splice(tableIndex, 1, inner)
+
+        return {
+          ...table,
+          inner,
+        }
+      }
+
+      return table
+    })
+    .filter(table =>
+      settings[SettingKey.Table] === TableSetting.NonPhrasingContentToHTML
+        ? table.inner.data?.invalid
+        : true,
+    )
+}
+
+export const transformTableToHtml = (
+  tables: TableWithParent[],
   options: { allowDangerousHtml: boolean } = { allowDangerousHtml: false },
 ): void => {
-  invalidTables.forEach(invalidTable => {
-    const invalidTableIndex = invalidTable.parent?.children.findIndex(
-      child => child === invalidTable.inner,
+  tables.forEach(table => {
+    const tableIndex = table.parent?.children.findIndex(
+      child => child === table.inner,
     )
-    if (invalidTableIndex !== undefined && invalidTableIndex !== -1) {
-      invalidTable.parent?.children.splice(invalidTableIndex, 1, {
+    if (tableIndex !== undefined && tableIndex !== -1) {
+      table.parent?.children.splice(tableIndex, 1, {
         type: 'html',
         value: toHtml(
-          toHast(
-            {
-              ...invalidTable.inner,
-              children: invalidTable.inner.children.map(row => ({
-                ...row,
-                children: row.children.map(cell => ({
-                  ...cell,
-                  children: cell.data?.invalidChildren ?? cell.children,
-                })),
-              })),
-            } as mdast.Table,
-            {
-              allowDangerousHtml: options.allowDangerousHtml,
-            },
-          ),
+          toHast(table.inner, {
+            allowDangerousHtml: options.allowDangerousHtml,
+          }),
           {
             allowDangerousHtml: options.allowDangerousHtml,
           },
@@ -245,36 +284,28 @@ export const transformMentionUsers = async (
   }
 }
 
-export interface TransformTableWithParentsOptions {
-  transformGridToHtml: boolean
-  transformInvalidTablesToHtml: boolean
-}
-
-export const transformTableWithParents = (
-  tableWithParents: TableWithParent[],
-  options: TransformTableWithParentsOptions,
+export const transformTableBySettings = (
+  tables: TableWithParent[],
+  settings: Pick<Settings, SettingKey.Table | SettingKey.Grid>,
 ): void => {
-  if (options.transformGridToHtml) {
+  if (settings[SettingKey.Grid] === GridSetting.ToHTML) {
     transformGridToHtml(
-      tableWithParents.filter(item => item.inner.data?.type === BlockType.GRID),
+      tables.filter(item => item.inner.data?.type === BlockType.GRID),
       {
         allowDangerousHtml: true,
       },
     )
   }
 
-  if (options.transformInvalidTablesToHtml) {
-    transformInvalidTablesToHtml(
-      tableWithParents.filter(
-        item =>
-          item.inner.data?.invalid &&
-          (options.transformGridToHtml
-            ? item.inner.data.type !== BlockType.GRID
-            : true),
-      ),
-      {
-        allowDangerousHtml: true,
-      },
-    )
-  }
+  transformTableToHtml(
+    mapTableBySettings(
+      settings[SettingKey.Grid] === GridSetting.ToHTML
+        ? tables.filter(item => item.inner.data?.type !== BlockType.GRID)
+        : tables,
+      settings,
+    ),
+    {
+      allowDangerousHtml: true,
+    },
+  )
 }

@@ -13,13 +13,9 @@ import {
   transformMentionUsers,
   UniqueFileName,
   withSignal,
-  transformTableWithParents,
+  transformTableBySettings,
 } from '../common/utils'
-import {
-  getSettings,
-  TableWithNonPhrasingContent,
-  Grid,
-} from '../common/settings'
+import { getSettings, Grid } from '../common/settings'
 import { DownloadMethod, SettingKey } from '@/common/settings'
 
 const uniqueFileName = new UniqueFileName()
@@ -549,7 +545,7 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
 
   const settings = await getSettings([
     SettingKey.DownloadMethod,
-    SettingKey.TableWithNonPhrasingContent,
+    SettingKey.Table,
     SettingKey.Grid,
     SettingKey.TextHighlight,
     SettingKey.DownloadFileWithUniqueName,
@@ -581,12 +577,7 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
     })
 
     const singleFileContent = () => {
-      transformTableWithParents(tableWithParents, {
-        transformGridToHtml: settings[SettingKey.Grid] === Grid.ToHTML,
-        transformInvalidTablesToHtml:
-          settings[SettingKey.TableWithNonPhrasingContent] ===
-          TableWithNonPhrasingContent.ToHTML,
-      })
+      transformTableBySettings(tableWithParents, settings)
 
       const markdown = Docx.stringify(root)
 
@@ -649,12 +640,7 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
         zipFs.addBlob(filename, content)
       })
 
-      transformTableWithParents(tableWithParents, {
-        transformGridToHtml: settings[SettingKey.Grid] === Grid.ToHTML,
-        transformInvalidTablesToHtml:
-          settings[SettingKey.TableWithNonPhrasingContent] ===
-          TableWithNonPhrasingContent.ToHTML,
-      })
+      transformTableBySettings(tableWithParents, settings)
 
       const markdown = Docx.stringify(root)
 

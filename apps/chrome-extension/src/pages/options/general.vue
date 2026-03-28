@@ -23,12 +23,7 @@ import {
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  SettingKey,
-  TableWithNonPhrasingContent,
-  Grid,
-  Theme,
-} from '@/common/settings'
+import { SettingKey, Table, Grid, Theme } from '@/common/settings'
 import { useI18n } from 'vue-i18n'
 import { useSettings } from '../shared/settings'
 
@@ -37,7 +32,7 @@ const { locale, availableLocales, t } = useI18n()
 const schema = z.object({
   [SettingKey.Locale]: z.enum(availableLocales.value),
   [SettingKey.Theme]: z.enum(Theme),
-  [SettingKey.TableWithNonPhrasingContent]: z.enum(TableWithNonPhrasingContent),
+  [SettingKey.Table]: z.enum(Table),
   [SettingKey.Grid]: z.enum(Grid),
   [SettingKey.TextHighlight]: z.boolean(),
 })
@@ -55,7 +50,7 @@ watch(query.data, newValues => {
       values: pick(newValues, [
         SettingKey.Locale,
         SettingKey.Theme,
-        SettingKey.TableWithNonPhrasingContent,
+        SettingKey.Table,
         SettingKey.Grid,
         SettingKey.TextHighlight,
       ]),
@@ -157,16 +152,12 @@ const onSubmit = handleSubmit.withControlled(async values => {
           </Field>
         </VeeField>
 
-        <VeeField
-          v-slot="{ field, errors }"
-          :name="`[${SettingKey.TableWithNonPhrasingContent}]`"
-        >
+        <VeeField v-slot="{ field, errors }" :name="`[${SettingKey.Table}]`">
           <Field orientation="responsive" :data-invalid="!!errors.length">
             <FieldContent>
-              <FieldLabel
-                for="form-vee-general-table-with-non-phrasing-content"
-                >{{ t('general.table_with_non_phrasing_content') }}</FieldLabel
-              >
+              <FieldLabel for="form-vee-general-table">{{
+                t('general.table')
+              }}</FieldLabel>
               <FieldError v-if="errors.length" :errors="errors" />
             </FieldContent>
             <Skeleton v-if="query.isPending.value" class="h-9 w-40" />
@@ -176,26 +167,27 @@ const onSubmit = handleSubmit.withControlled(async values => {
               @update:model-value="field.onChange"
             >
               <SelectTrigger
-                id="form-vee-general-table-with-non-phrasing-content"
+                id="form-vee-general-table"
                 :aria-invalid="!!errors.length"
               >
-                <SelectValue
-                  :placeholder="
-                    t('general.table_with_non_phrasing_content.placeholder')
-                  "
-                />
+                <SelectValue :placeholder="t('general.table.placeholder')" />
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
                   <SelectItem
-                    :key="`${locale}_${TableWithNonPhrasingContent.Filtered}`"
-                    :value="TableWithNonPhrasingContent.Filtered"
-                    >{{ t('general.table_with_non_phrasing_content.filtered') }}
+                    :key="`${locale}_${Table.Filtered}`"
+                    :value="Table.Filtered"
+                    >{{ t('general.table.filtered') }}
                   </SelectItem>
                   <SelectItem
-                    :key="`${locale}_${TableWithNonPhrasingContent.ToHTML}`"
-                    :value="TableWithNonPhrasingContent.ToHTML"
-                    >{{ t('general.table_with_non_phrasing_content.to_html') }}
+                    :key="`${locale}_${Table.NonPhrasingContentToHTML}`"
+                    :value="Table.NonPhrasingContentToHTML"
+                    >{{ t('general.table.non_phrasing_content_to_html') }}
+                  </SelectItem>
+                  <SelectItem
+                    :key="`${locale}_${Table.ToHTML}`"
+                    :value="Table.ToHTML"
+                    >{{ t('general.table.to_html') }}
                   </SelectItem>
                 </SelectGroup>
               </SelectContent>
