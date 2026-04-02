@@ -1,5 +1,11 @@
 # @dolphin/lark
 
+## 2.6.5
+
+### Patch Changes
+
+- [#127](https://github.com/whale4113/cloud-document-converter/pull/127) [`53e1dff`](https://github.com/whale4113/cloud-document-converter/commit/53e1dff2c6b81a389665b2e0bf2c20eb10aaca4b) Thanks [@whale4113](https://github.com/whale4113)! - feat: support rowspan/colspan
+
 ## 2.6.4
 
 ### Patch Changes
