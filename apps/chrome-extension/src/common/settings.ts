@@ -7,7 +7,7 @@ export enum SettingKey {
   Locale = 'general.locale',
   Theme = 'general.theme',
   DownloadMethod = 'download.method',
-  TableWithNonPhrasingContent = 'general.table_with_non_phrasing_content',
+  Table = 'general.table',
   Grid = 'general.grid',
   TextHighlight = 'general.text_highlight',
   DownloadFileWithUniqueName = 'download.file_with_unique_name',
@@ -24,8 +24,9 @@ export enum DownloadMethod {
   ShowSaveFilePicker = 'showSaveFilePicker',
 }
 
-export enum TableWithNonPhrasingContent {
+export enum Table {
   Filtered = 'filtered',
+  NonPhrasingContentToHTML = 'nonPhrasingContentToHTML',
   ToHTML = 'toHTML',
 }
 
@@ -39,7 +40,7 @@ export interface Settings {
   [SettingKey.Locale]: string
   [SettingKey.Theme]: (typeof Theme)[keyof typeof Theme]
   [SettingKey.DownloadMethod]: (typeof DownloadMethod)[keyof typeof DownloadMethod]
-  [SettingKey.TableWithNonPhrasingContent]: (typeof TableWithNonPhrasingContent)[keyof typeof TableWithNonPhrasingContent]
+  [SettingKey.Table]: (typeof Table)[keyof typeof Table]
   [SettingKey.Grid]: (typeof Grid)[keyof typeof Grid]
   [SettingKey.TextHighlight]: boolean
   [SettingKey.DownloadFileWithUniqueName]: boolean
@@ -51,7 +52,7 @@ export const fallbackSettings: Settings = {
   [SettingKey.DownloadMethod]: supported
     ? DownloadMethod.ShowSaveFilePicker
     : DownloadMethod.Direct,
-  [SettingKey.TableWithNonPhrasingContent]: TableWithNonPhrasingContent.ToHTML,
+  [SettingKey.Table]: Table.NonPhrasingContentToHTML,
   [SettingKey.Grid]: Grid.Flatten,
   [SettingKey.TextHighlight]: true,
   [SettingKey.DownloadFileWithUniqueName]: false,

@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo",
+    "noEmit": true,
+    "erasableSyntaxOnly": false
+  },
+  "extends": "@dolphin/typescript-config/node.json",
+  "include": ["tests"]
+}

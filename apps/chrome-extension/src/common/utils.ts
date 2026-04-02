@@ -9,6 +9,12 @@ import {
 } from '@dolphin/lark'
 import { v4 as uuidv4 } from 'uuid'
 import { Second, waitForFunction } from '@dolphin/common'
+import {
+  SettingKey,
+  Table as TableSetting,
+  Grid as GridSetting,
+  type Settings,
+} from './settings'
 
 interface Ref<T> {
   current: T
@@ -101,37 +107,150 @@ export class UniqueFileName {
   }
 }
 
-export const transformInvalidTablesToHtml = (
-  invalidTables: TableWithParent[],
+export const mapTableBySettings = (
+  tables: TableWithParent[],
+  settings: Pick<Settings, SettingKey.Table>,
+): TableWithParent[] => {
+  if (settings[SettingKey.Table] === TableSetting.Filtered) {
+    return []
+  }
+
+  return tables
+    .map(table => {
+      if (!table.inner.data?.invalid) return table
+
+      const tableIndex = table.parent?.children.findIndex(
+        child => child === table.inner,
+      )
+
+      if (tableIndex !== undefined && tableIndex !== -1) {
+        const inner = {
+          ...table.inner,
+          children: table.inner.children.map(row => ({
+            ...row,
+            children: row.children.map(cell => ({
+              ...cell,
+              children: cell.data?.invalidChildren ?? cell.children,
+            })),
+          })),
+        } as mdast.Table
+
+        table.parent?.children.splice(tableIndex, 1, inner)
+
+        return {
+          ...table,
+          inner,
+        }
+      }
+
+      return table
+    })
+    .filter(table =>
+      settings[SettingKey.Table] === TableSetting.NonPhrasingContentToHTML
+        ? table.inner.data?.invalid
+        : true,
+    )
+}
+
+/**
+ * Filters out redundant cells that are covered by rowSpan/colSpan
+ * and adds appropriate HTML properties to the spanning cells.
+ *
+ * @param table The Markdown AST table to process
+ */
+const processTableSpans = (table: mdast.Table): void => {
+  const occupied: boolean[][] = []
+
+  for (let rowIndex = 0; rowIndex < table.children.length; rowIndex++) {
+    const row = table.children[rowIndex]
+    const newCells: mdast.TableCell[] = []
+
+    for (
+      let columnIndex = 0;
+      columnIndex < row.children.length;
+      columnIndex++
+    ) {
+      // If this position is covered by a previous spanning cell, skip it
+      if (occupied[rowIndex]?.[columnIndex]) continue
+
+      const cell = row.children[columnIndex]
+      newCells.push(cell)
+
+      const rowSpan = cell.data?.rowSpan ?? 1
+      const colSpan = cell.data?.colSpan ?? 1
+
+      if (rowSpan > 1 || colSpan > 1) {
+        // Ensure data and hProperties objects exist
+        cell.data ??= {}
+        cell.data.hProperties ??= {}
+
+        // Add HTML span properties for correct rendering
+        if (rowSpan > 1) cell.data.hProperties['rowSpan'] = rowSpan
+        if (colSpan > 1) cell.data.hProperties['colSpan'] = colSpan
+
+        // Mark the area covered by this spanning cell as occupied
+        for (let i = 0; i < rowSpan; i++) {
+          for (let j = 0; j < colSpan; j++) {
+            // Skip the current cell itself
+            if (i === 0 && j === 0) continue
+            const targetRow = rowIndex + i
+            const targetCol = columnIndex + j
+            occupied[targetRow] ??= []
+            occupied[targetRow][targetCol] = true
+          }
+        }
+      }
+    }
+
+    // Update row children with only the non-redundant cells
+    row.children = newCells
+  }
+}
+
+export const transformTableToHtml = (
+  tables: TableWithParent[],
   options: { allowDangerousHtml: boolean } = { allowDangerousHtml: false },
 ): void => {
-  invalidTables.forEach(invalidTable => {
-    const invalidTableIndex = invalidTable.parent?.children.findIndex(
-      child => child === invalidTable.inner,
+  tables.forEach(table => {
+    const tableIndex = table.parent?.children.findIndex(
+      child => child === table.inner,
     )
-    if (invalidTableIndex !== undefined && invalidTableIndex !== -1) {
-      invalidTable.parent?.children.splice(invalidTableIndex, 1, {
+    if (tableIndex !== undefined && tableIndex !== -1) {
+      processTableSpans(table.inner)
+
+      const hastTable = toHast(table.inner, {
+        allowDangerousHtml: options.allowDangerousHtml,
+      })
+
+      if (hastTable.type === 'element') {
+        const hastColGroup: hast.Element = {
+          type: 'element',
+          tagName: 'colgroup',
+          properties: {},
+          children:
+            table.inner.data?.colWidths?.map(width => ({
+              type: 'element',
+              tagName: 'col',
+              properties: {
+                width:
+                  table.inner.data?.type === BlockType.GRID
+                    ? `${width.toFixed(2)}%`
+                    : width,
+              },
+              children: [],
+            })) ?? [],
+        }
+
+        hastTable.children = ([hastColGroup] as hast.ElementContent[]).concat(
+          hastTable.children,
+        )
+      }
+
+      table.parent?.children.splice(tableIndex, 1, {
         type: 'html',
-        value: toHtml(
-          toHast(
-            {
-              ...invalidTable.inner,
-              children: invalidTable.inner.children.map(row => ({
-                ...row,
-                children: row.children.map(cell => ({
-                  ...cell,
-                  children: cell.data?.invalidChildren ?? cell.children,
-                })),
-              })),
-            } as mdast.Table,
-            {
-              allowDangerousHtml: options.allowDangerousHtml,
-            },
-          ),
-          {
-            allowDangerousHtml: options.allowDangerousHtml,
-          },
-        ),
+        value: toHtml(hastTable, {
+          allowDangerousHtml: options.allowDangerousHtml,
+        }),
       })
     }
   })
@@ -245,36 +364,28 @@ export const transformMentionUsers = async (
   }
 }
 
-export interface TransformTableWithParentsOptions {
-  transformGridToHtml: boolean
-  transformInvalidTablesToHtml: boolean
-}
-
-export const transformTableWithParents = (
-  tableWithParents: TableWithParent[],
-  options: TransformTableWithParentsOptions,
+export const transformTableBySettings = (
+  tables: TableWithParent[],
+  settings: Pick<Settings, SettingKey.Table | SettingKey.Grid>,
 ): void => {
-  if (options.transformGridToHtml) {
+  if (settings[SettingKey.Grid] === GridSetting.ToHTML) {
     transformGridToHtml(
-      tableWithParents.filter(item => item.inner.data?.type === BlockType.GRID),
+      tables.filter(item => item.inner.data?.type === BlockType.GRID),
       {
         allowDangerousHtml: true,
       },
     )
   }
 
-  if (options.transformInvalidTablesToHtml) {
-    transformInvalidTablesToHtml(
-      tableWithParents.filter(
-        item =>
-          item.inner.data?.invalid &&
-          (options.transformGridToHtml
-            ? item.inner.data.type !== BlockType.GRID
-            : true),
-      ),
-      {
-        allowDangerousHtml: true,
-      },
-    )
-  }
+  transformTableToHtml(
+    mapTableBySettings(
+      settings[SettingKey.Grid] === GridSetting.ToHTML
+        ? tables.filter(item => item.inner.data?.type !== BlockType.GRID)
+        : tables,
+      settings,
+    ),
+    {
+      allowDangerousHtml: true,
+    },
+  )
 }

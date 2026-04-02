@@ -22,7 +22,7 @@ export const useSettings = <
     | SettingKey.Locale
     | SettingKey.Theme
     | SettingKey.DownloadMethod
-    | SettingKey.TableWithNonPhrasingContent
+    | SettingKey.Table
     | SettingKey.Grid
     | SettingKey.TextHighlight
     | SettingKey.DownloadFileWithUniqueName,
@@ -42,7 +42,7 @@ export const useSettings = <
       SettingKey.Locale,
       SettingKey.Theme,
       SettingKey.DownloadMethod,
-      SettingKey.TableWithNonPhrasingContent,
+      SettingKey.Table,
       SettingKey.Grid,
       SettingKey.TextHighlight,
       SettingKey.DownloadFileWithUniqueName,

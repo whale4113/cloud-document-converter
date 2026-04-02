@@ -7,14 +7,9 @@ import { confirm } from '../common/notification'
 import { reportBug } from '../common/issue'
 import {
   transformMentionUsers,
-  transformTableWithParents,
+  transformTableBySettings,
 } from '../common/utils'
-import {
-  getSettings,
-  SettingKey,
-  TableWithNonPhrasingContent,
-  Grid,
-} from '../common/settings'
+import { getSettings, SettingKey, Grid } from '../common/settings'
 
 const enum TranslationKey {
   FAILED_TO_LOAD_IMAGES = 'failed_to_load_images',
@@ -85,7 +80,7 @@ const main = async () => {
   }
 
   const settings = await getSettings([
-    SettingKey.TableWithNonPhrasingContent,
+    SettingKey.Table,
     SettingKey.Grid,
     SettingKey.TextHighlight,
   ])
@@ -113,12 +108,7 @@ const main = async () => {
     })
     .filter(isDefined)
 
-  transformTableWithParents(tableWithParents, {
-    transformGridToHtml: settings[SettingKey.Grid] === Grid.ToHTML,
-    transformInvalidTablesToHtml:
-      settings[SettingKey.TableWithNonPhrasingContent] ===
-      TableWithNonPhrasingContent.ToHTML,
-  })
+  transformTableBySettings(tableWithParents, settings)
 
   const markdown = Docx.stringify(root)
 
