@@ -1,5 +1,16 @@
 # @dolphin/chrome-extension
 
+## 1.10.7
+
+### Patch Changes
+
+- [#127](https://github.com/whale4113/cloud-document-converter/pull/127) [`310a87a`](https://github.com/whale4113/cloud-document-converter/commit/310a87a6f51b3f9009584132362d9d8a9d16b4a3) Thanks [@whale4113](https://github.com/whale4113)! - fix: error info length to long
+
+- [#127](https://github.com/whale4113/cloud-document-converter/pull/127) [`d5f44c8`](https://github.com/whale4113/cloud-document-converter/commit/d5f44c81ac37d83b2499d26be976074990a2c27f) Thanks [@whale4113](https://github.com/whale4113)! - feat: support option to convert table to html
+
+- Updated dependencies [[`53e1dff`](https://github.com/whale4113/cloud-document-converter/commit/53e1dff2c6b81a389665b2e0bf2c20eb10aaca4b)]:
+  - @dolphin/lark@2.6.5
+
 ## 1.10.6
 
 ### Patch Changes
