@@ -232,7 +232,10 @@ export const transformTableToHtml = (
               type: 'element',
               tagName: 'col',
               properties: {
-                width,
+                width:
+                  table.inner.data?.type === BlockType.GRID
+                    ? `${width.toFixed(2)}%`
+                    : width,
               },
               children: [],
             })) ?? [],
