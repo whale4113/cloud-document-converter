@@ -38,6 +38,7 @@ export const i18n = createI18n({
         'Preserve text highlighting (font color, font background color)',
       'download.file_with_unique_name':
         'Use UUID for image and diagram filenames',
+      'download.encode_image_as_base64': 'Encode image as Base64 (< 100 KiB)',
       'download.method': 'Download Method',
       'download.method.placeholder': 'Select download method',
       'download.method.direct': 'Direct Download',
@@ -79,6 +80,7 @@ export const i18n = createI18n({
       'general.grid.to_html': '转换成 HTML',
       'general.text_highlight': '保留文本高亮（字体颜色、字体背景颜色）',
       'download.file_with_unique_name': '图片和图表文件使用 UUID 命名',
+      'download.encode_image_as_base64': '将图片编码为 Base64（< 100 KiB）',
       'download.method': '下载方式',
       'download.method.placeholder': '选择下载方式',
       'download.method.direct': '直接下载',
