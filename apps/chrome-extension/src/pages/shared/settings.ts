@@ -25,7 +25,8 @@ export const useSettings = <
     | SettingKey.Table
     | SettingKey.Grid
     | SettingKey.TextHighlight
-    | SettingKey.DownloadFileWithUniqueName,
+    | SettingKey.DownloadFileWithUniqueName
+    | SettingKey.EncodeImageAsBase64,
 >(
   options: { keys?: Key[] } = {},
 ): {
@@ -46,6 +47,7 @@ export const useSettings = <
       SettingKey.Grid,
       SettingKey.TextHighlight,
       SettingKey.DownloadFileWithUniqueName,
+      SettingKey.EncodeImageAsBase64,
     ] as Key[],
   } = options
 

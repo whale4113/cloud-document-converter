@@ -11,6 +11,7 @@ export enum SettingKey {
   Grid = 'general.grid',
   TextHighlight = 'general.text_highlight',
   DownloadFileWithUniqueName = 'download.file_with_unique_name',
+  EncodeImageAsBase64 = 'download.encode_image_as_base64',
 }
 
 export enum Theme {
@@ -44,6 +45,7 @@ export interface Settings {
   [SettingKey.Grid]: (typeof Grid)[keyof typeof Grid]
   [SettingKey.TextHighlight]: boolean
   [SettingKey.DownloadFileWithUniqueName]: boolean
+  [SettingKey.EncodeImageAsBase64]: boolean
 }
 
 export const fallbackSettings: Settings = {
@@ -56,6 +58,7 @@ export const fallbackSettings: Settings = {
   [SettingKey.Grid]: Grid.Flatten,
   [SettingKey.TextHighlight]: true,
   [SettingKey.DownloadFileWithUniqueName]: false,
+  [SettingKey.EncodeImageAsBase64]: false,
 }
 
 export const getSettings = async <Key extends keyof Settings>(
