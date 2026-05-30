@@ -958,43 +958,87 @@ const fetchImageSources = (imageBlock: ImageBlock) =>
       .catch(reject)
   })
 
-const whiteboardToBlob = async (
-  whiteboard: Whiteboard,
-): Promise<Blob | null> => {
-  if (!whiteboard.whiteboardBlock) return null
+/**
+ * @description Whether the whiteboard's scene has finished loading and can be
+ * captured. Merely having `whiteboardBlock` defined is not enough: when the
+ * block is captured before its nodes are laid out, `getNodesBounds()` returns a
+ * degenerate box, producing a blank image with abnormal dimensions.
+ */
+const isWhiteboardContentReady = (whiteboard: Whiteboard): boolean => {
+  const block = whiteboard.whiteboardBlock
+  if (!block) return false
 
-  const padding = 24
-  const ratio = window.devicePixelRatio
-  const backgroundColor = '#ffffff'
+  const ratioApp = block.abilityKit.getRatioApp()
+  if (ratioApp.app) {
+    const { minX, maxX, minY, maxY } =
+      ratioApp.app.application.nodeManager.getNodesBounds()
 
-  let rationApp = whiteboard.whiteboardBlock.abilityKit.getRatioApp()
-
-  if (rationApp.app) {
-    const bounds = rationApp.app.application.nodeManager.getNodesBounds()
-    bounds.maxX += padding
-    bounds.minX -= padding
-    bounds.maxY += padding
-    bounds.minY -= padding
-
-    const canvas = rationApp.app.renderManager.getImageOffscreenCanvas(
-      bounds,
-      ratio,
-      backgroundColor,
-    )
-
-    if (!canvas) return null
-
-    return new Promise(resolve => {
-      checkCanvasDimensions(canvas)
-
-      canvas.toBlob(resolve)
-    })
+    // The app path can render once its scene has non-empty bounds.
+    if (maxX - minX > 0 && maxY - minY > 0) return true
   }
 
-  rationApp = whiteboard.whiteboardBlock.isolateEnv.getRatioApp()
+  // Otherwise fall back to the isolateEnv path's own readiness signal.
+  return block.isolateEnv.hasRatioApp()
+}
+
+interface WhiteboardCaptureOptions {
+  padding: number
+  ratio: number
+  backgroundColor: string
+}
+
+/**
+ * @description Capture via the new `abilityKit` app path. Returns `null` when it
+ * cannot produce a valid image (no app, empty scene bounds, or no canvas) so the
+ * caller can fall back to the isolateEnv path.
+ */
+const whiteboardAppToBlob = async (
+  block: WhiteboardBlock,
+  { padding, ratio, backgroundColor }: WhiteboardCaptureOptions,
+): Promise<Blob | null> => {
+  const ratioApp = block.abilityKit.getRatioApp()
+  if (!ratioApp.app) return null
+
+  const bounds = ratioApp.app.application.nodeManager.getNodesBounds()
+
+  // A degenerate box means the scene is not laid out yet; bail so we don't emit
+  // a blank image with padding-only dimensions.
+  if (bounds.maxX - bounds.minX <= 0 || bounds.maxY - bounds.minY <= 0) {
+    return null
+  }
+
+  bounds.maxX += padding
+  bounds.minX -= padding
+  bounds.maxY += padding
+  bounds.minY -= padding
+
+  const canvas = ratioApp.app.renderManager.getImageOffscreenCanvas(
+    bounds,
+    ratio,
+    backgroundColor,
+  )
+
+  if (!canvas) return null
+
+  return await new Promise<Blob | null>(resolve => {
+    checkCanvasDimensions(canvas)
+
+    canvas.toBlob(resolve)
+  })
+}
+
+/**
+ * @description Capture via the legacy `isolateEnv` path. Used as a fallback when
+ * the app path is unavailable or its scene bounds are still empty.
+ */
+const whiteboardIsolateEnvToBlob = async (
+  block: WhiteboardBlock,
+  { padding, ratio }: WhiteboardCaptureOptions,
+): Promise<Blob | null> => {
+  const ratioApp = block.isolateEnv.getRatioApp()
 
   const imageDataWrapper =
-    await rationApp.ratioAppProxy.getOriginImageDataByNodeId(
+    await ratioApp.ratioAppProxy.getOriginImageDataByNodeId(
       padding,
       [''],
       false,
@@ -1006,6 +1050,26 @@ const whiteboardToBlob = async (
   return await imageDataToBlob(imageDataWrapper.data, {
     onDispose: imageDataWrapper.release,
   })
+}
+
+const whiteboardToBlob = async (
+  whiteboard: Whiteboard,
+): Promise<Blob | null> => {
+  const block = whiteboard.whiteboardBlock
+  if (!block) return null
+
+  const options: WhiteboardCaptureOptions = {
+    padding: 24,
+    ratio: window.devicePixelRatio,
+    backgroundColor: '#ffffff',
+  }
+
+  // Prefer the app path; fall back to isolateEnv when it can't produce a valid
+  // image (e.g. app exists but its scene bounds are still empty).
+  return (
+    (await whiteboardAppToBlob(block, options)) ??
+    (await whiteboardIsolateEnvToBlob(block, options))
+  )
 }
 
 const diagramToSVGElement = (diagram: DiagramBlock): SVGElement | null => {
@@ -1386,10 +1450,13 @@ export class Transformer {
                     () =>
                       locateBlockWithRecordId(whiteboard.record?.id ?? '').then(
                         isSuccess =>
-                          isSuccess && whiteboard.whiteboardBlock !== undefined,
+                          isSuccess && isWhiteboardContentReady(whiteboard),
                       ),
                     {
-                      timeout: 3 * Second,
+                      // Heavy whiteboards may take a while to lay out after the
+                      // block is located; keep polling so we don't capture an
+                      // empty scene (a blank image with padding-only dimensions).
+                      timeout: 10 * Second,
                     },
                   )
                 } catch (error) {
