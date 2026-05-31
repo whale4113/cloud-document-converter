@@ -334,9 +334,9 @@ interface ImageDataWrapper {
 }
 
 interface RatioApp {
-  ratioAppProxy: {
+  ratioAppProxy?: {
     getOriginImageDataByNodeId: (
-      i: 24,
+      i: number,
       o: [''],
       r: false,
       n: number,
@@ -978,7 +978,10 @@ const isWhiteboardContentReady = (whiteboard: Whiteboard): boolean => {
   }
 
   // Otherwise fall back to the isolateEnv path's own readiness signal.
-  return block.isolateEnv.hasRatioApp()
+  return (
+    block.isolateEnv.hasRatioApp() &&
+    block.isolateEnv.getRatioApp().ratioAppProxy !== undefined
+  )
 }
 
 interface WhiteboardCaptureOptions {
@@ -1038,7 +1041,7 @@ const whiteboardIsolateEnvToBlob = async (
   const ratioApp = block.isolateEnv.getRatioApp()
 
   const imageDataWrapper =
-    await ratioApp.ratioAppProxy.getOriginImageDataByNodeId(
+    await ratioApp.ratioAppProxy?.getOriginImageDataByNodeId(
       padding,
       [''],
       false,
