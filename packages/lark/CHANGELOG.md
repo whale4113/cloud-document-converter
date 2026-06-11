@@ -1,5 +1,13 @@
 # @dolphin/lark
 
+## 2.6.6
+
+### Patch Changes
+
+- [#136](https://github.com/whale4113/cloud-document-converter/pull/136) [`ebfadc4`](https://github.com/whale4113/cloud-document-converter/commit/ebfadc48a9c1afe705685fe826829174da823cdc) Thanks [@scrazyakai](https://github.com/scrazyakai)! - fix: whiteboard exported as a blank image with abnormal dimensions when captured before its content finished loading
+
+  Wait for the whiteboard's scene to have non-empty bounds before capturing, and fall back to the isolateEnv path when the app path cannot produce a valid image.
+
 ## 2.6.5
 
 ### Patch Changes
