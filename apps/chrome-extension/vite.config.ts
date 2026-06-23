@@ -15,6 +15,7 @@ export default defineConfig(({ mode }) => ({
       input: {
         options: resolve(__dirname, 'options.html'),
         popup: resolve(__dirname, 'popup.html'),
+        batchDownload: resolve(__dirname, 'batch-download.html'),
       },
       output: {
         dir: 'dist/pages',
