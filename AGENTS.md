@@ -5,6 +5,8 @@
 This repo is a pnpm + Turborepo monorepo for **Cloud Document Converter** (a browser extension that converts Lark cloud docs to Markdown).
 
 - `apps/chrome-extension/`: Vue-based extension (UI in `src/pages/`, shared UI in `src/components/`, scripts in `src/scripts/`).
+  - The options page is at `pages/options.html`, the popup menu is at `pages/popup.html`, and the Batch Download workbench is at `pages/batch-download.html` (UI in `src/pages/batch-download/`).
+  - Scripts under `src/scripts/` (e.g. `download-lark-docx-as-markdown.ts`, `extract-lark-docx.ts`) are compiled via `tsdown` to `dist/bundles/scripts/` for runtime injection.
 - `apps/chrome-extension-e2e/`: Playwright-based E2E tests for the extension (live Feishu validation + env unit tests).
 - `packages/lark/`: core Lark Doc/Docx → Markdown transformer.
 - `packages/common/`: shared utilities used across workspaces.
