@@ -1,12 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import {
-  FolderPlus,
-  Search,
-  ChevronDown,
-  ChevronRight,
-  FolderMinus,
-} from 'lucide-vue-next'
+import { FolderPlus, Search, ChevronDown, ChevronRight } from 'lucide-vue-next'
 import { useInitLocale } from '../../shared/i18n'
 import FileTreeNode, {
   type TreeNode,

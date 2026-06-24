@@ -135,7 +135,9 @@ async function toBlob(
     chunks.push(value)
     receivedLength += value.length
 
-    onProgress?.(receivedLength / contentLength)
+    if (contentLength > 0) {
+      onProgress?.(receivedLength / contentLength)
+    }
   }
 
   const blob = new Blob(chunks)
@@ -353,7 +355,7 @@ const downloadFile = async (
         return null
       }
     },
-    { signal },
+    { signal, onAbort: cancel },
   )
 
   return result

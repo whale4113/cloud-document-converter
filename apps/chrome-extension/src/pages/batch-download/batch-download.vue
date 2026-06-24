@@ -9,7 +9,6 @@ import {
   Terminal,
   RotateCcw,
   Sparkles,
-  HelpCircle,
 } from 'lucide-vue-next'
 import { useInitLocale } from '../shared/i18n'
 import { useInitTheme } from '../shared/theme'
@@ -48,7 +47,6 @@ const logs = ref<
     message: string
   }[]
 >([])
-const downloadProgressMap = ref<Record<string, number>>({})
 
 // Helper: Get timestamp
 const getTimestamp = () => {
@@ -269,7 +267,10 @@ const waitTabLoaded = (tabId: number): Promise<void> => {
 // Helper to wait for the Feishu document compiler to initialize on the page
 const waitDocxReady = async (tabId: number): Promise<boolean> => {
   const maxTries = 30
-  addLog(`[Diagnostic] Starting docx ready check for tabId ${tabId}. Max tries: ${maxTries}`, 'info')
+  addLog(
+    `[Diagnostic] Starting docx ready check for tabId ${tabId}. Max tries: ${maxTries}`,
+    'info',
+  )
   for (let i = 0; i < maxTries; i++) {
     try {
       const results = await chrome.scripting.executeScript({
@@ -281,8 +282,13 @@ const waitDocxReady = async (tabId: number): Promise<boolean> => {
             url: window.location.href,
             title: document.title,
             hasPageMain: typeof PageMain !== 'undefined',
-            hasBlockManager: typeof PageMain !== 'undefined' && typeof PageMain.blockManager !== 'undefined',
-            hasRootBlockModel: typeof PageMain !== 'undefined' && typeof PageMain.blockManager !== 'undefined' && typeof PageMain.blockManager.rootBlockModel !== 'undefined',
+            hasBlockManager:
+              typeof PageMain !== 'undefined' &&
+              typeof PageMain.blockManager !== 'undefined',
+            hasRootBlockModel:
+              typeof PageMain !== 'undefined' &&
+              typeof PageMain.blockManager !== 'undefined' &&
+              typeof PageMain.blockManager.rootBlockModel !== 'undefined',
             hasEditor: typeof editor !== 'undefined',
           }
         },
@@ -292,20 +298,26 @@ const waitDocxReady = async (tabId: number): Promise<boolean> => {
       if (results && results[0]?.result) {
         const status = results[0].result
         const isReady = status.hasRootBlockModel || status.hasEditor
-        
+
         addLog(
           `[Diagnostic] Try ${i + 1}/${maxTries}: URL="${status.url}", Title="${status.title}", PageMain=${status.hasPageMain}, BlockManager=${status.hasBlockManager}, RootBlockModel=${status.hasRootBlockModel}, Editor=${status.hasEditor} => Ready=${isReady}`,
-          isReady ? 'success' : 'info'
+          isReady ? 'success' : 'info',
         )
 
         if (isReady) {
           return true
         }
       } else {
-        addLog(`[Diagnostic] Try ${i + 1}/${maxTries}: No result returned from script execution`, 'warn')
+        addLog(
+          `[Diagnostic] Try ${i + 1}/${maxTries}: No result returned from script execution`,
+          'warn',
+        )
       }
     } catch (err: any) {
-      addLog(`[Diagnostic] Try ${i + 1}/${maxTries} execution failed: ${err.message || String(err)}`, 'warn')
+      addLog(
+        `[Diagnostic] Try ${i + 1}/${maxTries} execution failed: ${err.message || String(err)}`,
+        'warn',
+      )
     }
     await new Promise(resolve => setTimeout(resolve, 1000))
   }
@@ -387,20 +399,6 @@ const runBatchDownload = async () => {
 
   const downloadResults = new Map<string, ExtractionResult>()
 
-  // Listen to progress updates sent from extract script via background message passing
-  const progressListener = (message: any, sender: any) => {
-    const tabId = sender.tab?.id
-    if (!tabId) return
-
-    if (message.type === 'CDC_PROGRESS_UPDATE') {
-      const fileNode = files.find(f => f.tabId === tabId)
-      if (fileNode) {
-        fileNode.progress = message.progress
-      }
-    }
-  }
-  chrome.runtime.onMessage.addListener(progressListener as any)
-
   try {
     for (const file of files) {
       addLog(`Processing document: "${file.name}"`, 'info')
@@ -426,7 +424,10 @@ const runBatchDownload = async () => {
             'info',
           )
         } else {
-          addLog(`[Diagnostic] Creating background window for URL: ${file.url}`, 'info')
+          addLog(
+            `[Diagnostic] Creating background window for URL: ${file.url}`,
+            'info',
+          )
           const win = await chrome.windows.create({
             url: file.url,
             focused: false,
@@ -447,11 +448,16 @@ const runBatchDownload = async () => {
           }
 
           if (tabId === undefined) {
-            throw new Error('Failed to retrieve tab ID for the background window')
+            throw new Error(
+              'Failed to retrieve tab ID for the background window',
+            )
           }
 
           file.tabId = tabId
-          addLog(`[Diagnostic] Waiting for tab ID ${tabId} loading status to be 'complete'...`, 'info')
+          addLog(
+            `[Diagnostic] Waiting for tab ID ${tabId} loading status to be 'complete'...`,
+            'info',
+          )
           await waitTabLoaded(tabId)
           addLog(
             `Background window loaded (status 'complete'). Waiting for docx compiler to initialize...`,
@@ -551,7 +557,6 @@ const runBatchDownload = async () => {
     )
   } finally {
     exporting.value = false
-    chrome.runtime.onMessage.removeListener(progressListener as any)
     // reset tabIds
     files.forEach(f => {
       f.tabId = undefined
