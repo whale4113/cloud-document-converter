@@ -414,11 +414,11 @@ document.addEventListener(
 
 window.addEventListener('message', event => {
   const data = event.data as Record<string, unknown> | null
-  if (data && data.type === 'CDC_EXTRACTED_DATA_INTERNAL') {
+  if (data && data['type'] === 'CDC_EXTRACTED_DATA_INTERNAL') {
     void chrome.runtime.sendMessage({
-      type: data.success ? 'CDC_EXTRACTION_SUCCESS' : 'CDC_EXTRACTION_ERROR',
-      data: data.data,
-      error: data.error,
+      type: data['success'] ? 'CDC_EXTRACTION_SUCCESS' : 'CDC_EXTRACTION_ERROR',
+      data: data['data'],
+      error: data['error'],
     })
   }
 })

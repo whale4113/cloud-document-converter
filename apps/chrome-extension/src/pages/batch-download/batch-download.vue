@@ -19,8 +19,10 @@ import type {
   FolderNode,
   FileNode,
 } from './components/FileTreeNode.vue'
-import { fs } from '@zip.js/zip.js'
+import { fs, configure } from '@zip.js/zip.js'
 import { cn } from '@/lib/utils'
+
+configure({ useWebWorkers: false })
 
 const { t } = useInitLocale()
 useInitTheme()
@@ -264,27 +266,46 @@ const waitTabLoaded = (tabId: number): Promise<void> => {
   })
 }
 
-// Helper to poll isReady on global docx object
+// Helper to wait for the Feishu document compiler to initialize on the page
 const waitDocxReady = async (tabId: number): Promise<boolean> => {
   const maxTries = 30
+  addLog(`[Diagnostic] Starting docx ready check for tabId ${tabId}. Max tries: ${maxTries}`, 'info')
   for (let i = 0; i < maxTries; i++) {
     try {
       const results = await chrome.scripting.executeScript({
         target: { tabId },
         func: () => {
-          // @ts-ignore
-          return (
-            typeof docx !== 'undefined' &&
-            docx.isReady({ checkWhiteboard: true })
-          )
+          const PageMain = (window as any).PageMain
+          const editor = (window as any).editor
+          return {
+            url: window.location.href,
+            title: document.title,
+            hasPageMain: typeof PageMain !== 'undefined',
+            hasBlockManager: typeof PageMain !== 'undefined' && typeof PageMain.blockManager !== 'undefined',
+            hasRootBlockModel: typeof PageMain !== 'undefined' && typeof PageMain.blockManager !== 'undefined' && typeof PageMain.blockManager.rootBlockModel !== 'undefined',
+            hasEditor: typeof editor !== 'undefined',
+          }
         },
         world: 'MAIN',
       })
+
       if (results && results[0]?.result) {
-        return true
+        const status = results[0].result
+        const isReady = status.hasRootBlockModel || status.hasEditor
+        
+        addLog(
+          `[Diagnostic] Try ${i + 1}/${maxTries}: URL="${status.url}", Title="${status.title}", PageMain=${status.hasPageMain}, BlockManager=${status.hasBlockManager}, RootBlockModel=${status.hasRootBlockModel}, Editor=${status.hasEditor} => Ready=${isReady}`,
+          isReady ? 'success' : 'info'
+        )
+
+        if (isReady) {
+          return true
+        }
+      } else {
+        addLog(`[Diagnostic] Try ${i + 1}/${maxTries}: No result returned from script execution`, 'warn')
       }
-    } catch {
-      // Script injection might fail temporarily while page is redirecting
+    } catch (err: any) {
+      addLog(`[Diagnostic] Try ${i + 1}/${maxTries} execution failed: ${err.message || String(err)}`, 'warn')
     }
     await new Promise(resolve => setTimeout(resolve, 1000))
   }
@@ -388,10 +409,10 @@ const runBatchDownload = async () => {
       file.error = undefined
 
       let tabId: number | undefined
-      let openedTab = false
+      let openedWindowId: number | undefined
 
       try {
-        // Step 1: Find or open tab
+        // Step 1: Find or open tab/window
         const allTabs = await chrome.tabs.query({})
         const existingTab = allTabs.find(
           t => t.url && normalizeUrl(t.url) === normalizeUrl(file.url),
@@ -405,17 +426,35 @@ const runBatchDownload = async () => {
             'info',
           )
         } else {
-          addLog(`Opening background tab for "${file.name}"...`, 'info')
-          const newTab = await chrome.tabs.create({
+          addLog(`[Diagnostic] Creating background window for URL: ${file.url}`, 'info')
+          const win = await chrome.windows.create({
             url: file.url,
-            active: false,
+            focused: false,
+            width: 1024,
+            height: 768,
           })
-          tabId = newTab.id
+          if (!win || win.id === undefined) {
+            throw new Error('Failed to create background window')
+          }
+          openedWindowId = win.id
+          addLog(`[Diagnostic] Created background window ID: ${win.id}`, 'info')
+
+          if (win.tabs && win.tabs.length > 0) {
+            tabId = win.tabs[0]?.id
+          } else {
+            const tabs = await chrome.tabs.query({ windowId: win.id })
+            tabId = tabs[0]?.id
+          }
+
+          if (tabId === undefined) {
+            throw new Error('Failed to retrieve tab ID for the background window')
+          }
+
           file.tabId = tabId
-          openedTab = true
-          await waitTabLoaded(tabId!)
+          addLog(`[Diagnostic] Waiting for tab ID ${tabId} loading status to be 'complete'...`, 'info')
+          await waitTabLoaded(tabId)
           addLog(
-            `Background tab loaded. Waiting for docx compiler to initialize...`,
+            `Background window loaded (status 'complete'). Waiting for docx compiler to initialize...`,
             'info',
           )
         }
@@ -465,11 +504,11 @@ const runBatchDownload = async () => {
         file.error = err.message || String(err)
         addLog(`Failed to download "${file.name}": ${file.error}`, 'error')
       } finally {
-        if (openedTab && tabId !== undefined) {
+        if (openedWindowId !== undefined) {
           try {
-            await chrome.tabs.remove(tabId)
+            await chrome.windows.remove(openedWindowId)
           } catch {
-            // tab might have been closed by user
+            // window might have been closed by user
           }
         }
       }

@@ -2,8 +2,10 @@ import i18next from 'i18next'
 import { Toast, Docx, docx, type mdast } from '@dolphin/lark'
 import { Minute, OneHundred, Second, waitFor } from '@dolphin/common'
 import { fileSave, supported } from 'browser-fs-access'
-import { fs } from '@zip.js/zip.js'
+import { fs, configure } from '@zip.js/zip.js'
 import normalizeFileName from 'filenamify/browser'
+
+configure({ useWebWorkers: false })
 import { cluster } from 'radash'
 import { CommonTranslationKey, en, Namespace, zh } from '../common/i18n'
 import { confirm } from '../common/notification'
