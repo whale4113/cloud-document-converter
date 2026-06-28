@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
-import { FolderPlus, Search, ChevronDown, ChevronRight } from 'lucide-vue-next'
+import { ref, watch, computed, provide } from 'vue'
+import { FolderPlus, Search, ChevronDown, ChevronRight, Folder, FolderOpen } from 'lucide-vue-next'
 import { useInitLocale } from '../../shared/i18n'
 import FileTreeNode, {
   type TreeNode,
   type FolderNode,
   type FileNode,
+  DragDropKey,
+  type DragDropContext,
 } from './FileTreeNode.vue'
 import { cn } from '@/lib/utils'
 
@@ -202,6 +204,144 @@ watch(searchQuery, newVal => {
     expandAll()
   }
 })
+
+// Drag and Drop implementation
+const draggedNodeId = ref<string | null>(null)
+const draggedNode = ref<TreeNode | null>(null)
+const dragOverNodeId = ref<string | null>(null)
+const expandTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
+
+// Helper: Check if childId is a descendant of parent
+const isDescendant = (parent: FolderNode, childId: string): boolean => {
+  for (const child of parent.children) {
+    if (child.id === childId) return true
+    if (child.type === 'folder') {
+      if (isDescendant(child, childId)) return true
+    }
+  }
+  return false
+}
+
+// Helper: Check if a drop target is valid
+const isDropTargetValid = (targetNode: TreeNode): boolean => {
+  if (!draggedNode.value) return false
+  if (targetNode.type !== 'folder') return false
+  if (draggedNode.value.id === targetNode.id) return false
+  
+  // A folder cannot be dropped into its own descendant
+  if (
+    draggedNode.value.type === 'folder' &&
+    isDescendant(draggedNode.value as FolderNode, targetNode.id)
+  ) {
+    return false
+  }
+  return true
+}
+
+const handleDragStart = (e: DragEvent, node: TreeNode) => {
+  // Disallow dragging the root node
+  if (node.id === 'root') {
+    e.preventDefault()
+    return
+  }
+  draggedNodeId.value = node.id
+  draggedNode.value = node
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', node.id)
+  }
+}
+
+const handleDragEnd = (e: DragEvent) => {
+  cleanupDrag()
+}
+
+const handleDragOver = (e: DragEvent, targetNode: TreeNode) => {
+  if (!isDropTargetValid(targetNode)) {
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'none'
+    }
+    return
+  }
+
+  if (e.dataTransfer) {
+    e.dataTransfer.dropEffect = 'move'
+  }
+
+  if (dragOverNodeId.value !== targetNode.id) {
+    dragOverNodeId.value = targetNode.id
+
+    // Auto-expand folder after hovering for 800ms
+    if (expandTimeout.value) {
+      clearTimeout(expandTimeout.value)
+      expandTimeout.value = null
+    }
+
+    if (targetNode.type === 'folder' && !expandedIds.value.has(targetNode.id)) {
+      expandTimeout.value = setTimeout(() => {
+        if (dragOverNodeId.value === targetNode.id) {
+          expandedIds.value.add(targetNode.id)
+        }
+      }, 800)
+    }
+  }
+}
+
+const handleDragLeave = (e: DragEvent, targetNode: TreeNode) => {
+  if (dragOverNodeId.value === targetNode.id) {
+    dragOverNodeId.value = null
+    if (expandTimeout.value) {
+      clearTimeout(expandTimeout.value)
+      expandTimeout.value = null
+    }
+  }
+}
+
+const handleDrop = (e: DragEvent, targetNode: FolderNode) => {
+  e.preventDefault()
+  if (!draggedNode.value || !isDropTargetValid(targetNode)) {
+    cleanupDrag()
+    return
+  }
+
+  // 1. Find and remove from current parent
+  const parent = findParentFolder(props.rootNode, draggedNode.value.id)
+  if (parent) {
+    parent.children = parent.children.filter(c => c.id !== draggedNode.value!.id)
+  }
+
+  // 2. Add to target folder children
+  targetNode.children.push(draggedNode.value)
+
+  // 3. Auto-expand target folder to show items
+  expandedIds.value.add(targetNode.id)
+
+  // 4. Trigger deep reactivity/saving
+  emit('update:rootNode', { ...props.rootNode })
+
+  cleanupDrag()
+}
+
+const cleanupDrag = () => {
+  draggedNodeId.value = null
+  draggedNode.value = null
+  dragOverNodeId.value = null
+  if (expandTimeout.value) {
+    clearTimeout(expandTimeout.value)
+    expandTimeout.value = null
+  }
+}
+
+// Provide Drag and Drop Context
+provide(DragDropKey, {
+  draggedNodeId,
+  dragOverNodeId,
+  onDragStart: handleDragStart,
+  onDragEnd: handleDragEnd,
+  onDragOver: handleDragOver,
+  onDragLeave: handleDragLeave,
+  onDrop: handleDrop,
+})
 </script>
 
 <template>
@@ -259,13 +399,18 @@ watch(searchQuery, newVal => {
       <div
         :class="
           cn(
-            'group flex items-center justify-between py-1.5 px-2 rounded-md cursor-pointer text-sm font-medium transition-colors',
+            'group flex items-center justify-between py-1.5 px-2 rounded-md cursor-pointer text-sm font-medium transition-colors border border-transparent',
             selectedNodeId === 'root'
               ? 'bg-primary/10 text-primary dark:bg-primary/20'
               : 'hover:bg-muted text-foreground/80 hover:text-foreground',
+            dragOverNodeId === 'root' && 'bg-primary/20 border-dashed border-primary/50'
           )
         "
         @click="handleSelect(rootNode)"
+        @dragover.prevent="handleDragOver($event, rootNode)"
+        @dragenter.prevent="handleDragOver($event, rootNode)"
+        @dragleave="handleDragLeave($event, rootNode)"
+        @drop="handleDrop($event, rootNode)"
       >
         <div class="flex items-center gap-1.5">
           <span

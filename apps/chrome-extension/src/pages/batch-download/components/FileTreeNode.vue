@@ -1,18 +1,5 @@
-<script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
-import {
-  Folder,
-  FolderOpen,
-  FileText,
-  ChevronRight,
-  ChevronDown,
-  Edit2,
-  Trash2,
-  Check,
-  X,
-  Loader2,
-} from 'lucide-vue-next'
-import { cn } from '@/lib/utils'
+<script lang="ts">
+import { type InjectionKey, type Ref } from 'vue'
 
 export interface FileNode {
   id: string
@@ -34,6 +21,35 @@ export interface FolderNode {
 
 export type TreeNode = FileNode | FolderNode
 
+export interface DragDropContext {
+  draggedNodeId: Ref<string | null>
+  dragOverNodeId: Ref<string | null>
+  onDragStart: (e: DragEvent, node: TreeNode) => void
+  onDragEnd: (e: DragEvent) => void
+  onDragOver: (e: DragEvent, node: TreeNode) => void
+  onDragLeave: (e: DragEvent, node: TreeNode) => void
+  onDrop: (e: DragEvent, node: FolderNode) => void
+}
+
+export const DragDropKey: InjectionKey<DragDropContext> = Symbol('DragDropKey')
+</script>
+
+<script setup lang="ts">
+import { ref, computed, nextTick, inject } from 'vue'
+import {
+  Folder,
+  FolderOpen,
+  FileText,
+  ChevronRight,
+  ChevronDown,
+  Edit2,
+  Trash2,
+  Check,
+  X,
+  Loader2,
+} from 'lucide-vue-next'
+import { cn } from '@/lib/utils'
+
 const props = defineProps<{
   node: TreeNode
   depth: number
@@ -51,6 +67,9 @@ const emit = defineEmits<{
 const isFolder = computed(() => props.node.type === 'folder')
 const isExpanded = computed(() => props.expandedIds.has(props.node.id))
 const isSelected = computed(() => props.selectedNodeId === props.node.id)
+
+// Inject Drag-and-Drop Context
+const dragDropCtx = inject(DragDropKey, null)
 
 // Rename state
 const isRenaming = ref(false)
@@ -101,12 +120,21 @@ const handleToggleExpand = (e: Event) => {
       :style="{ paddingLeft: `${depth * 12 + 6}px` }"
       :class="
         cn(
-          'group flex items-center justify-between py-1.5 px-2 rounded-md cursor-pointer text-sm transition-colors duration-150',
+          'group flex items-center justify-between py-1.5 px-2 rounded-md cursor-pointer text-sm transition-colors duration-150 border border-transparent',
           isSelected
             ? 'bg-primary/10 text-primary dark:bg-primary/20 font-medium'
             : 'hover:bg-muted text-foreground/80 hover:text-foreground',
+          dragDropCtx?.draggedNodeId.value === node.id && 'opacity-40',
+          dragDropCtx?.dragOverNodeId.value === node.id && 'bg-primary/20 border-dashed border-primary/50'
         )
       "
+      :draggable="!isRenaming"
+      @dragstart="dragDropCtx?.onDragStart($event, node)"
+      @dragend="dragDropCtx?.onDragEnd($event)"
+      @dragover.prevent="dragDropCtx?.onDragOver($event, node)"
+      @dragenter.prevent="dragDropCtx?.onDragOver($event, node)"
+      @dragleave="dragDropCtx?.onDragLeave($event, node)"
+      @drop="dragDropCtx?.onDrop($event, node as FolderNode)"
       @click="handleSelect"
     >
       <div class="flex items-center gap-1.5 min-w-0 flex-1">
