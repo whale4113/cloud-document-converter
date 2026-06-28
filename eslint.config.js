@@ -15,6 +15,12 @@ export default defineConfig(
     },
   },
   {
-    ignores: ['**/.cache/', '**/dist/', '**/compiled/', '**/*.d.ts'],
+    ignores: [
+      '**/.cache/',
+      '**/dist/',
+      '**/compiled/',
+      '**/*.d.ts',
+      '**/.chromium-profile/',
+    ],
   },
 )

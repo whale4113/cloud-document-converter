@@ -20,6 +20,7 @@ import type {
 } from './components/FileTreeNode.vue'
 import { fs, configure } from '@zip.js/zip.js'
 import { cn } from '@/lib/utils'
+import normalizeFileName from 'filenamify/browser'
 
 configure({ useWebWorkers: false })
 
@@ -347,13 +348,16 @@ const getZipEntries = (
   parentPath: string,
   downloadResults: Map<string, ExtractionResult>,
 ): { zipPath: string; content: ArrayBuffer | string; isBinary: boolean }[] => {
-  const currentPath = parentPath ? `${parentPath}/${node.name}` : node.name
+  const sanitizedName = node.id === 'root' ? '' : normalizeFileName(node.name)
+  const currentPath = parentPath
+    ? `${parentPath}/${sanitizedName}`
+    : sanitizedName
 
   if (node.type === 'folder') {
     return node.children.flatMap(child =>
       getZipEntries(
         child,
-        parentPath ? currentPath : node.id === 'root' ? '' : node.name,
+        parentPath ? currentPath : node.id === 'root' ? '' : sanitizedName,
         downloadResults,
       ),
     )
@@ -367,7 +371,7 @@ const getZipEntries = (
         const nameWithExt = node.name.endsWith('.md')
           ? node.name
           : `${node.name}.md`
-        relativePath = nameWithExt
+        relativePath = normalizeFileName(nameWithExt)
       }
 
       const zipPath = parentPath
@@ -499,6 +503,26 @@ const runBatchDownload = async () => {
         )
 
         const result = await extractionPromise
+        console.log('[Diagnostic] batch-download.vue received result for:', file.name, {
+          title: result.title,
+          filesCount: result.files?.length,
+          files: result.files?.map(f => ({
+            path: f.path,
+            isBinary: f.isBinary,
+            contentType: typeof f.content,
+            contentLength: typeof f.content === 'string' ? f.content.length : 'N/A',
+          })),
+        })
+
+        // Print receiving diagnostics to UI Process Log
+        if (result && result.files) {
+          const filesSummary = result.files.map(f => {
+            const sizeStr = typeof f.content === 'string' ? `${f.content.length} chars` : 'unknown'
+            return `${f.path.split('/').pop() ?? f.path} (${f.isBinary ? 'binary' : 'text'}, ${sizeStr})`
+          }).join(', ')
+          addLog(`[Diagnostic] Received files for "${file.name}": [${filesSummary}]`, 'info')
+        }
+
         downloadResults.set(file.id, result)
 
         file.status = 'success'
@@ -534,8 +558,22 @@ const runBatchDownload = async () => {
 
     for (const entry of zipEntries) {
       if (entry.isBinary) {
-        zipFs.addBlob(entry.zipPath, new Blob([entry.content]))
+        try {
+          console.log(`[Diagnostic] Packaging binary entry: ${entry.zipPath}, content type: ${typeof entry.content}, preview: ${typeof entry.content === 'string' ? entry.content.slice(0, 100) : 'N/A'}`)
+          const res = await fetch(entry.content as string)
+          const blob = await res.blob()
+          console.log(`[Diagnostic] Successfully fetched blob for ${entry.zipPath}: size=${blob.size} bytes, type=${blob.type}`)
+          addLog(`[Diagnostic] Packaging binary entry: ${entry.zipPath}, size=${blob.size} bytes`, 'info')
+          zipFs.addBlob(entry.zipPath, blob)
+        } catch (fetchErr: any) {
+          console.error(
+            `Failed to decode data URL for ${entry.zipPath}:`,
+            fetchErr,
+          )
+          addLog(`Failed to package binary asset ${entry.zipPath}: ${fetchErr.message || String(fetchErr)}`, 'error')
+        }
       } else {
+        addLog(`[Diagnostic] Packaging text entry: ${entry.zipPath}, size=${typeof entry.content === 'string' ? entry.content.length : 0} chars`, 'info')
         zipFs.addText(entry.zipPath, entry.content as string)
       }
     }

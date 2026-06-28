@@ -145,9 +145,24 @@ async function toBlob(
   return blob
 }
 
+const blobToDataURL = (blob: Blob): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      if (typeof reader.result === 'string') {
+        resolve(reader.result)
+      } else {
+        reject(new Error('Failed to convert blob to data URL'))
+      }
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
+}
+
 interface ExtractedFileResult {
   filename: string
-  content: ArrayBuffer
+  content: string
 }
 
 const downloadImage = async (
@@ -188,7 +203,7 @@ const downloadImage = async (
 
           return {
             filename,
-            content: await content.arrayBuffer(),
+            content: await blobToDataURL(content),
           }
         }
 
@@ -243,7 +258,7 @@ const downloadImage = async (
 
             return {
               filename,
-              content: await blob.arrayBuffer(),
+              content: await blobToDataURL(blob),
             }
           } finally {
             Toast.remove(filename)
@@ -330,7 +345,7 @@ const downloadFile = async (
 
           return {
             filename,
-            content: await blob.arrayBuffer(),
+            content: await blobToDataURL(blob),
           }
         } finally {
           Toast.remove(filename)
@@ -618,7 +633,7 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
 
   recoverScrollTop?.()
 
-  return {
+  const result = {
     title: recommendName,
     files: [
       {
@@ -633,6 +648,17 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
       })),
     ],
   }
+  console.log('[Diagnostic] extract-lark-docx.ts returning result:', {
+    title: result.title,
+    filesCount: result.files.length,
+    files: result.files.map(f => ({
+      path: f.path,
+      isBinary: f.isBinary,
+      contentType: typeof f.content,
+      contentLength: typeof f.content === 'string' ? f.content.length : 'N/A',
+    })),
+  })
+  return result
 }
 
 let controller = new AbortController()
