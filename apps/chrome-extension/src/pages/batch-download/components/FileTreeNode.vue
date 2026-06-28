@@ -6,7 +6,7 @@ export interface FileNode {
   name: string
   type: 'file'
   url: string
-  status: 'pending' | 'loading' | 'success' | 'failed'
+  status: 'pending' | 'loading' | 'success' | 'failed' | 'skipped'
   progress?: number
   error?: string
   tabId?: number
@@ -47,6 +47,8 @@ import {
   Check,
   X,
   Loader2,
+  SkipForward,
+  RotateCcw,
 } from 'lucide-vue-next'
 import { cn } from '@/lib/utils'
 
@@ -62,6 +64,8 @@ const emit = defineEmits<{
   (e: 'toggleExpand', id: string): void
   (e: 'delete', node: TreeNode): void
   (e: 'rename', node: TreeNode, newName: string): void
+  (e: 'retry', node: FileNode): void
+  (e: 'skip', node: FileNode): void
 }>()
 
 const isFolder = computed(() => props.node.type === 'folder')
@@ -125,7 +129,8 @@ const handleToggleExpand = (e: Event) => {
             ? 'bg-primary/10 text-primary dark:bg-primary/20 font-medium'
             : 'hover:bg-muted text-foreground/80 hover:text-foreground',
           dragDropCtx?.draggedNodeId.value === node.id && 'opacity-40',
-          dragDropCtx?.dragOverNodeId.value === node.id && 'bg-primary/20 border-dashed border-primary/50'
+          dragDropCtx?.dragOverNodeId.value === node.id &&
+            'bg-primary/20 border-dashed border-primary/50',
         )
       "
       :draggable="!isRenaming"
@@ -194,12 +199,19 @@ const handleToggleExpand = (e: Event) => {
         <template v-if="!isFolder && !isRenaming">
           <span
             v-if="(node as FileNode).status === 'loading'"
-            class="flex items-center gap-1 text-[10px] text-primary/70"
+            class="flex items-center gap-1.5 text-[10px] text-primary/70"
           >
             <Loader2 class="h-3 w-3 animate-spin" />
             <span v-if="(node as FileNode).progress !== undefined">
               {{ Math.floor(((node as FileNode).progress ?? 0) * 100) }}%
             </span>
+            <button
+              class="ml-1 p-0.5 hover:bg-destructive/10 text-destructive rounded transition-colors cursor-pointer"
+              title="Skip"
+              @click.stop="emit('skip', node as FileNode)"
+            >
+              <X class="h-3 w-3" />
+            </button>
           </span>
           <span
             v-else-if="(node as FileNode).status === 'success'"
@@ -214,6 +226,12 @@ const handleToggleExpand = (e: Event) => {
           >
             ✗
           </span>
+          <span
+            v-else-if="(node as FileNode).status === 'skipped'"
+            class="text-[10px] bg-muted text-muted-foreground px-1 rounded"
+          >
+            Skipped
+          </span>
         </template>
       </div>
 
@@ -222,6 +240,35 @@ const handleToggleExpand = (e: Event) => {
         v-if="!isRenaming"
         class="hidden group-hover:flex items-center gap-1 flex-shrink-0"
       >
+        <!-- Skip Action -->
+        <button
+          v-if="
+            !isFolder &&
+            ((node as FileNode).status === 'pending' ||
+              (node as FileNode).status === 'loading')
+          "
+          class="p-1 hover:bg-muted-foreground/15 rounded text-muted-foreground hover:text-foreground transition-colors"
+          title="Skip"
+          @click.stop="emit('skip', node as FileNode)"
+        >
+          <SkipForward class="h-3.5 w-3.5" />
+        </button>
+
+        <!-- Retry Action -->
+        <button
+          v-if="
+            !isFolder &&
+            ((node as FileNode).status === 'success' ||
+              (node as FileNode).status === 'failed' ||
+              (node as FileNode).status === 'skipped')
+          "
+          class="p-1 hover:bg-muted-foreground/15 rounded text-muted-foreground hover:text-foreground transition-colors"
+          title="Retry"
+          @click.stop="emit('retry', node as FileNode)"
+        >
+          <RotateCcw class="h-3.5 w-3.5" />
+        </button>
+
         <button
           class="p-1 hover:bg-muted-foreground/15 rounded text-muted-foreground hover:text-foreground transition-colors"
           title="Rename"
@@ -254,6 +301,8 @@ const handleToggleExpand = (e: Event) => {
         @toggle-expand="id => emit('toggleExpand', id)"
         @delete="n => emit('delete', n)"
         @rename="(n, name) => emit('rename', n, name)"
+        @retry="n => emit('retry', n)"
+        @skip="n => emit('skip', n)"
       />
     </div>
   </div>

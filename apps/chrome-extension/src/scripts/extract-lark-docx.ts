@@ -1,7 +1,7 @@
 import i18next from 'i18next'
 import { Toast, Docx, docx, type mdast } from '@dolphin/lark'
 import { Minute, OneHundred, Second, waitFor } from '@dolphin/common'
-import normalizeFileName from 'filenamify/browser'
+import { safeNormalizeFileName } from '@/lib/utils'
 import { cluster } from 'radash'
 import { CommonTranslationKey, en, Namespace, zh } from '../common/i18n'
 import { reportBug } from '../common/issue'
@@ -566,7 +566,7 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
   await transformMentionUsers(mentionUsers)
 
   const recommendName = docx.pageTitle
-    ? normalizeFileName(docx.pageTitle.slice(0, OneHundred))
+    ? safeNormalizeFileName(docx.pageTitle.slice(0, OneHundred))
     : 'doc'
 
   Toast.loading({

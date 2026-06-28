@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { ref, watch, computed, provide } from 'vue'
-import { FolderPlus, Search, ChevronDown, ChevronRight, Folder, FolderOpen } from 'lucide-vue-next'
+import {
+  FolderPlus,
+  Search,
+  ChevronDown,
+  ChevronRight,
+  Folder,
+  FolderOpen,
+} from 'lucide-vue-next'
 import { useInitLocale } from '../../shared/i18n'
 import FileTreeNode, {
   type TreeNode,
@@ -21,6 +28,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'update:rootNode', val: FolderNode): void
   (e: 'update:selectedNodeId', val: string): void
+  (e: 'retry', node: FileNode): void
+  (e: 'skip', node: FileNode): void
 }>()
 
 const searchQuery = ref('')
@@ -227,7 +236,7 @@ const isDropTargetValid = (targetNode: TreeNode): boolean => {
   if (!draggedNode.value) return false
   if (targetNode.type !== 'folder') return false
   if (draggedNode.value.id === targetNode.id) return false
-  
+
   // A folder cannot be dropped into its own descendant
   if (
     draggedNode.value.type === 'folder' &&
@@ -307,7 +316,9 @@ const handleDrop = (e: DragEvent, targetNode: FolderNode) => {
   // 1. Find and remove from current parent
   const parent = findParentFolder(props.rootNode, draggedNode.value.id)
   if (parent) {
-    parent.children = parent.children.filter(c => c.id !== draggedNode.value!.id)
+    parent.children = parent.children.filter(
+      c => c.id !== draggedNode.value!.id,
+    )
   }
 
   // 2. Add to target folder children
@@ -403,7 +414,8 @@ provide(DragDropKey, {
             selectedNodeId === 'root'
               ? 'bg-primary/10 text-primary dark:bg-primary/20'
               : 'hover:bg-muted text-foreground/80 hover:text-foreground',
-            dragOverNodeId === 'root' && 'bg-primary/20 border-dashed border-primary/50'
+            dragOverNodeId === 'root' &&
+              'bg-primary/20 border-dashed border-primary/50',
           )
         "
         @click="handleSelect(rootNode)"
@@ -448,6 +460,8 @@ provide(DragDropKey, {
           @toggle-expand="handleToggleExpand"
           @delete="handleDeleteNode"
           @rename="handleRenameNode"
+          @retry="node => emit('retry', node)"
+          @skip="node => emit('skip', node)"
         />
       </div>
       <div

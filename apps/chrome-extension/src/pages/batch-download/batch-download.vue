@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import {
   Settings,
   FolderDown,
@@ -19,8 +19,7 @@ import type {
   FileNode,
 } from './components/FileTreeNode.vue'
 import { fs, configure } from '@zip.js/zip.js'
-import { cn } from '@/lib/utils'
-import normalizeFileName from 'filenamify/browser'
+import { cn, safeNormalizeFileName } from '@/lib/utils'
 
 configure({ useWebWorkers: false })
 
@@ -41,6 +40,10 @@ const manualCaptureActive = ref(false)
 
 // Export Status
 const exporting = ref(false)
+const isPaused = ref(false)
+const downloadResults = ref<Map<string, ExtractionResult>>(new Map())
+const activeCancels = new Map<string, () => void>()
+
 const logs = ref<
   {
     time: string
@@ -331,6 +334,16 @@ const collectFileNodes = (node: TreeNode): FileNode[] => {
   return node.children.flatMap(collectFileNodes)
 }
 
+// Computed values for progress and state checks
+const totalCount = computed(() => collectFileNodes(rootNode.value).length)
+const successCount = computed(
+  () =>
+    collectFileNodes(rootNode.value).filter(f => f.status === 'success').length,
+)
+const hasStatuses = computed(() =>
+  collectFileNodes(rootNode.value).some(f => f.status !== 'pending'),
+)
+
 // Recursive zip path mapping helper
 interface ExtractedFile {
   path: string
@@ -348,7 +361,8 @@ const getZipEntries = (
   parentPath: string,
   downloadResults: Map<string, ExtractionResult>,
 ): { zipPath: string; content: ArrayBuffer | string; isBinary: boolean }[] => {
-  const sanitizedName = node.id === 'root' ? '' : normalizeFileName(node.name)
+  const sanitizedName =
+    node.id === 'root' ? '' : safeNormalizeFileName(node.name)
   const currentPath = parentPath
     ? `${parentPath}/${sanitizedName}`
     : sanitizedName
@@ -371,7 +385,7 @@ const getZipEntries = (
         const nameWithExt = node.name.endsWith('.md')
           ? node.name
           : `${node.name}.md`
-        relativePath = normalizeFileName(nameWithExt)
+        relativePath = safeNormalizeFileName(nameWithExt)
       }
 
       const zipPath = parentPath
@@ -386,194 +400,256 @@ const getZipEntries = (
   }
 }
 
-// Execute batch download
-const runBatchDownload = async () => {
-  const files = collectFileNodes(rootNode.value)
-  if (files.length === 0) {
-    addLog(
-      'No documents to download. Please capture some documents first.',
-      'warn',
-    )
-    return
+// Process a single file extraction
+const processFile = async (file: FileNode) => {
+  let tabId: number | undefined
+  let openedWindowId: number | undefined
+  let isCancelled = false
+  let resolvePromise: any
+  let rejectPromise: any
+
+  const promise = new Promise<ExtractionResult>((resolve, reject) => {
+    resolvePromise = resolve
+    rejectPromise = reject
+  })
+
+  const cancel = () => {
+    isCancelled = true
+    addLog(`Cancelled/Skipped document: "${file.name}"`, 'warn')
+    if (openedWindowId !== undefined) {
+      chrome.windows.remove(openedWindowId).catch(() => {})
+    }
+    rejectPromise(new Error('Cancelled by user'))
   }
-
-  exporting.value = true
-  clearLogs()
-  addLog(`Starting batch download of ${files.length} documents...`, 'info')
-
-  const downloadResults = new Map<string, ExtractionResult>()
+  activeCancels.set(file.id, cancel)
 
   try {
-    for (const file of files) {
-      addLog(`Processing document: "${file.name}"`, 'info')
-      file.status = 'loading'
-      file.progress = 0
-      file.error = undefined
+    // Step 1: Find or open tab/window
+    const allTabs = await chrome.tabs.query({})
+    const existingTab = allTabs.find(
+      t => t.url && normalizeUrl(t.url) === normalizeUrl(file.url),
+    )
 
-      let tabId: number | undefined
-      let openedWindowId: number | undefined
+    if (isCancelled) throw new Error('Cancelled by user')
 
-      try {
-        // Step 1: Find or open tab/window
-        const allTabs = await chrome.tabs.query({})
-        const existingTab = allTabs.find(
-          t => t.url && normalizeUrl(t.url) === normalizeUrl(file.url),
-        )
+    if (existingTab && existingTab.id !== undefined) {
+      tabId = existingTab.id
+      file.tabId = tabId
+      addLog(
+        `Found open tab for "${file.name}". Injecting extraction script...`,
+        'info',
+      )
+    } else {
+      addLog(
+        `[Diagnostic] Creating background window for URL: ${file.url}`,
+        'info',
+      )
+      const win = await chrome.windows.create({
+        url: file.url,
+        focused: false,
+        width: 1024,
+        height: 768,
+      })
+      if (!win || win.id === undefined) {
+        throw new Error('Failed to create background window')
+      }
+      openedWindowId = win.id
+      addLog(`[Diagnostic] Created background window ID: ${win.id}`, 'info')
 
-        if (existingTab && existingTab.id !== undefined) {
-          tabId = existingTab.id
-          file.tabId = tabId
-          addLog(
-            `Found open tab for "${file.name}". Injecting extraction script...`,
-            'info',
-          )
-        } else {
-          addLog(
-            `[Diagnostic] Creating background window for URL: ${file.url}`,
-            'info',
-          )
-          const win = await chrome.windows.create({
-            url: file.url,
-            focused: false,
-            width: 1024,
-            height: 768,
-          })
-          if (!win || win.id === undefined) {
-            throw new Error('Failed to create background window')
-          }
-          openedWindowId = win.id
-          addLog(`[Diagnostic] Created background window ID: ${win.id}`, 'info')
+      if (win.tabs && win.tabs.length > 0) {
+        tabId = win.tabs[0]?.id
+      } else {
+        const tabs = await chrome.tabs.query({ windowId: win.id })
+        tabId = tabs[0]?.id
+      }
 
-          if (win.tabs && win.tabs.length > 0) {
-            tabId = win.tabs[0]?.id
-          } else {
-            const tabs = await chrome.tabs.query({ windowId: win.id })
-            tabId = tabs[0]?.id
-          }
+      if (tabId === undefined) {
+        throw new Error('Failed to retrieve tab ID for the background window')
+      }
 
-          if (tabId === undefined) {
-            throw new Error(
-              'Failed to retrieve tab ID for the background window',
-            )
-          }
+      file.tabId = tabId
+      addLog(
+        `[Diagnostic] Waiting for tab ID ${tabId} loading status to be 'complete'...`,
+        'info',
+      )
+      await waitTabLoaded(tabId)
+      addLog(
+        `Background window loaded (status 'complete'). Waiting for docx compiler to initialize...`,
+        'info',
+      )
+    }
 
-          file.tabId = tabId
-          addLog(
-            `[Diagnostic] Waiting for tab ID ${tabId} loading status to be 'complete'...`,
-            'info',
-          )
-          await waitTabLoaded(tabId)
-          addLog(
-            `Background window loaded (status 'complete'). Waiting for docx compiler to initialize...`,
-            'info',
-          )
-        }
+    if (isCancelled) throw new Error('Cancelled by user')
 
-        // Wait for docx component on the page
-        const ready = await waitDocxReady(tabId!)
-        if (!ready) {
-          throw new Error(
-            'Feishu document compiler did not load in time. Please check your network.',
-          )
-        }
+    // Wait for docx component on the page
+    const ready = await waitDocxReady(tabId!)
+    if (!ready) {
+      throw new Error(
+        'Feishu document compiler did not load in time. Please check your network.',
+      )
+    }
 
-        // Step 2: Inject extraction script
-        await chrome.scripting.executeScript({
-          files: ['bundles/scripts/extract-lark-docx.js'],
-          target: { tabId: tabId! },
-          world: 'MAIN',
-        })
+    if (isCancelled) throw new Error('Cancelled by user')
 
-        // Step 3: Wait for extraction complete message
-        const extractionPromise = new Promise<ExtractionResult>(
-          (resolve, reject) => {
-            const listener = (message: any, sender: any) => {
-              if (sender.tab?.id === tabId) {
-                if (message.type === 'CDC_EXTRACTION_SUCCESS') {
-                  chrome.runtime.onMessage.removeListener(listener as any)
-                  resolve(message.data)
-                } else if (message.type === 'CDC_EXTRACTION_ERROR') {
-                  chrome.runtime.onMessage.removeListener(listener as any)
-                  reject(new Error(message.error))
-                }
-              }
-            }
-            chrome.runtime.onMessage.addListener(listener as any)
-          },
-        )
+    // Step 2: Inject extraction script
+    await chrome.scripting.executeScript({
+      files: ['bundles/scripts/extract-lark-docx.js'],
+      target: { tabId: tabId! },
+      world: 'MAIN',
+    })
 
-        const result = await extractionPromise
-        console.log('[Diagnostic] batch-download.vue received result for:', file.name, {
-          title: result.title,
-          filesCount: result.files?.length,
-          files: result.files?.map(f => ({
-            path: f.path,
-            isBinary: f.isBinary,
-            contentType: typeof f.content,
-            contentLength: typeof f.content === 'string' ? f.content.length : 'N/A',
-          })),
-        })
-
-        // Print receiving diagnostics to UI Process Log
-        if (result && result.files) {
-          const filesSummary = result.files.map(f => {
-            const sizeStr = typeof f.content === 'string' ? `${f.content.length} chars` : 'unknown'
-            return `${f.path.split('/').pop() ?? f.path} (${f.isBinary ? 'binary' : 'text'}, ${sizeStr})`
-          }).join(', ')
-          addLog(`[Diagnostic] Received files for "${file.name}": [${filesSummary}]`, 'info')
-        }
-
-        downloadResults.set(file.id, result)
-
-        file.status = 'success'
-        file.progress = 1
-        addLog(`Successfully extracted "${file.name}".`, 'success')
-      } catch (err: any) {
-        console.error(`Failed to process ${file.name}:`, err)
-        file.status = 'failed'
-        file.error = err.message || String(err)
-        addLog(`Failed to download "${file.name}": ${file.error}`, 'error')
-      } finally {
-        if (openedWindowId !== undefined) {
-          try {
-            await chrome.windows.remove(openedWindowId)
-          } catch {
-            // window might have been closed by user
-          }
+    // Step 3: Wait for extraction complete message
+    const listener = (message: any, sender: any) => {
+      if (sender.tab?.id === tabId) {
+        if (message.type === 'CDC_EXTRACTION_SUCCESS') {
+          chrome.runtime.onMessage.removeListener(listener as any)
+          resolvePromise(message.data)
+        } else if (message.type === 'CDC_EXTRACTION_ERROR') {
+          chrome.runtime.onMessage.removeListener(listener as any)
+          rejectPromise(new Error(message.error))
         }
       }
     }
+    chrome.runtime.onMessage.addListener(listener as any)
 
-    // Step 4: Bundle ZIP
-    const successCount = downloadResults.size
-    if (successCount === 0) {
-      addLog('All document extractions failed. ZIP export cancelled.', 'error')
-      return
+    // Update cancel function to also clean up listener
+    const originalCancel = cancel
+    activeCancels.set(file.id, () => {
+      chrome.runtime.onMessage.removeListener(listener as any)
+      originalCancel()
+    })
+
+    const result = await promise
+    console.log(
+      '[Diagnostic] batch-download.vue received result for:',
+      file.name,
+      {
+        title: result.title,
+        filesCount: result.files?.length,
+        files: result.files?.map(f => ({
+          path: f.path,
+          isBinary: f.isBinary,
+          contentType: typeof f.content,
+          contentLength:
+            typeof f.content === 'string' ? f.content.length : 'N/A',
+        })),
+      },
+    )
+
+    // Print receiving diagnostics to UI Process Log
+    if (result && result.files) {
+      const filesSummary = result.files
+        .map(f => {
+          const sizeStr =
+            typeof f.content === 'string'
+              ? `${f.content.length} chars`
+              : 'unknown'
+          return `${f.path.split('/').pop() ?? f.path} (${f.isBinary ? 'binary' : 'text'}, ${sizeStr})`
+        })
+        .join(', ')
+      addLog(
+        `[Diagnostic] Received files for "${file.name}": [${filesSummary}]`,
+        'info',
+      )
     }
 
-    addLog(`Packaging ${successCount} successful documents into ZIP...`, 'info')
+    downloadResults.value.set(file.id, result)
 
+    file.status = 'success'
+    file.progress = 1
+    addLog(`Successfully extracted "${file.name}".`, 'success')
+  } catch (err: any) {
+    if (isCancelled) {
+      file.status = 'skipped'
+      file.error = 'Skipped by user'
+    } else {
+      console.error(`Failed to process ${file.name}:`, err)
+      file.status = 'failed'
+      file.error = err.message || String(err)
+      addLog(`Failed to download "${file.name}": ${file.error}`, 'error')
+    }
+  } finally {
+    activeCancels.delete(file.id)
+    file.tabId = undefined
+    if (openedWindowId !== undefined) {
+      try {
+        await chrome.windows.remove(openedWindowId)
+      } catch {
+        // window might have been closed by user
+      }
+    }
+  }
+}
+
+// Queue runner processing files recursively
+const processNext = async () => {
+  if (!exporting.value || isPaused.value) return
+
+  const files = collectFileNodes(rootNode.value)
+  const nextFile = files.find(f => f.status === 'pending')
+
+  if (nextFile) {
+    nextFile.status = 'loading'
+    nextFile.progress = 0
+    nextFile.error = undefined
+    rootNode.value = { ...rootNode.value } // Trigger watcher/save
+
+    await processFile(nextFile)
+
+    rootNode.value = { ...rootNode.value } // Trigger watcher/save
+    setTimeout(processNext, 0)
+  } else {
+    const anyLoading = files.some(f => f.status === 'loading')
+    if (!anyLoading) {
+      // All pending files processed! Let's package ZIP
+      await packageZip()
+      exporting.value = false
+    }
+  }
+}
+
+// Package successful downloads into ZIP
+const packageZip = async () => {
+  const successCount = downloadResults.value.size
+  if (successCount === 0) {
+    addLog('No document extractions succeeded. ZIP export cancelled.', 'error')
+    return
+  }
+
+  addLog(`Packaging ${successCount} successful documents into ZIP...`, 'info')
+
+  try {
     const zipFs = new fs.FS()
-    const zipEntries = getZipEntries(rootNode.value, '', downloadResults)
+    const zipEntries = getZipEntries(rootNode.value, '', downloadResults.value)
 
     for (const entry of zipEntries) {
       if (entry.isBinary) {
         try {
-          console.log(`[Diagnostic] Packaging binary entry: ${entry.zipPath}, content type: ${typeof entry.content}, preview: ${typeof entry.content === 'string' ? entry.content.slice(0, 100) : 'N/A'}`)
+          console.log(
+            `[Diagnostic] Packaging binary entry: ${entry.zipPath}, content type: ${typeof entry.content}`,
+          )
           const res = await fetch(entry.content as string)
           const blob = await res.blob()
-          console.log(`[Diagnostic] Successfully fetched blob for ${entry.zipPath}: size=${blob.size} bytes, type=${blob.type}`)
-          addLog(`[Diagnostic] Packaging binary entry: ${entry.zipPath}, size=${blob.size} bytes`, 'info')
+          addLog(
+            `[Diagnostic] Packaging binary entry: ${entry.zipPath}, size=${blob.size} bytes`,
+            'info',
+          )
           zipFs.addBlob(entry.zipPath, blob)
         } catch (fetchErr: any) {
           console.error(
             `Failed to decode data URL for ${entry.zipPath}:`,
             fetchErr,
           )
-          addLog(`Failed to package binary asset ${entry.zipPath}: ${fetchErr.message || String(fetchErr)}`, 'error')
+          addLog(
+            `Failed to package binary asset ${entry.zipPath}: ${fetchErr.message || String(fetchErr)}`,
+            'error',
+          )
         }
       } else {
-        addLog(`[Diagnostic] Packaging text entry: ${entry.zipPath}, size=${typeof entry.content === 'string' ? entry.content.length : 0} chars`, 'info')
+        addLog(
+          `[Diagnostic] Packaging text entry: ${entry.zipPath}, size=${typeof entry.content === 'string' ? entry.content.length : 0} chars`,
+          'info',
+        )
         zipFs.addText(entry.zipPath, entry.content as string)
       }
     }
@@ -588,17 +664,108 @@ const runBatchDownload = async () => {
 
     addLog('Export complete! ZIP file initiated download.', 'success')
   } catch (globalErr: any) {
-    console.error('Batch download error:', globalErr)
+    console.error('Batch ZIP packaging error:', globalErr)
     addLog(
-      `Critical error during batch export: ${globalErr.message || String(globalErr)}`,
+      `Critical error during batch packaging: ${globalErr.message || String(globalErr)}`,
       'error',
     )
-  } finally {
-    exporting.value = false
-    // reset tabIds
-    files.forEach(f => {
-      f.tabId = undefined
-    })
+  }
+}
+
+// Actions from control panel
+const startBatchDownload = async () => {
+  const files = collectFileNodes(rootNode.value)
+  if (files.length === 0) {
+    addLog(
+      'No documents to download. Please capture some documents first.',
+      'warn',
+    )
+    return
+  }
+
+  // Pre-check: If any success node is missing from in-memory results, reset it to pending!
+  files.forEach(file => {
+    if (file.status === 'success' && !downloadResults.value.has(file.id)) {
+      file.status = 'pending'
+    }
+  })
+
+  // Set failed files back to pending so they retry automatically.
+  files.forEach(file => {
+    if (file.status === 'failed') {
+      file.status = 'pending'
+    }
+  })
+
+  rootNode.value = { ...rootNode.value } // Trigger save
+
+  exporting.value = true
+  isPaused.value = false
+  clearLogs()
+  addLog('Starting batch download process...', 'info')
+
+  processNext()
+}
+
+const pauseBatchDownload = () => {
+  isPaused.value = true
+  addLog('Pausing batch download after current file completes...', 'warn')
+}
+
+const resumeBatchDownload = () => {
+  isPaused.value = false
+  addLog('Resuming batch download...', 'info')
+  processNext()
+}
+
+const stopAndPackage = async () => {
+  isPaused.value = false
+  exporting.value = false
+  addLog('Export stopped by user. Packaging completed documents...', 'info')
+  await packageZip()
+}
+
+const resetAllStatuses = () => {
+  const files = collectFileNodes(rootNode.value)
+  files.forEach(file => {
+    file.status = 'pending'
+    file.progress = undefined
+    file.error = undefined
+  })
+  downloadResults.value.clear()
+  rootNode.value = { ...rootNode.value }
+  addLog('Reset all document statuses and cleared cached results.', 'info')
+}
+
+// Handlers for FileTree retry/skip events
+const handleRetryFile = async (file: FileNode) => {
+  addLog(`Manual retry requested for "${file.name}"...`, 'info')
+  file.status = 'pending'
+  file.progress = 0
+  file.error = undefined
+  rootNode.value = { ...rootNode.value }
+
+  if (!exporting.value) {
+    exporting.value = true
+    isPaused.value = false
+    processNext()
+  }
+}
+
+const handleSkipFile = (file: FileNode) => {
+  addLog(`Skip requested for "${file.name}"`, 'info')
+  if (file.status === 'loading') {
+    const cancel = activeCancels.get(file.id)
+    if (cancel) {
+      cancel()
+    } else {
+      file.status = 'skipped'
+      file.error = 'Skipped by user'
+      rootNode.value = { ...rootNode.value }
+    }
+  } else {
+    file.status = 'skipped'
+    rootNode.value = { ...rootNode.value }
   }
 }
 </script>
@@ -648,6 +815,8 @@ const runBatchDownload = async () => {
           v-model:rootNode="rootNode"
           v-model:selectedNodeId="selectedNodeId"
           class="flex-1"
+          @retry="handleRetryFile"
+          @skip="handleSkipFile"
         />
       </section>
 
@@ -750,19 +919,61 @@ const runBatchDownload = async () => {
 
               <div class="mt-4 flex items-center justify-between gap-4">
                 <span class="text-xs text-muted-foreground">
-                  Ready to download:
-                  {{ collectFileNodes(rootNode).length }} documents
+                  Progress: {{ successCount }} / {{ totalCount }}
                 </span>
-                <button
-                  class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium text-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                  :disabled="
-                    exporting || collectFileNodes(rootNode).length === 0
-                  "
-                  @click="runBatchDownload"
-                >
-                  <FolderDown class="h-3.5 w-3.5" />
-                  {{ exporting ? 'Exporting...' : 'Export ZIP' }}
-                </button>
+
+                <div class="flex items-center gap-2">
+                  <!-- Reset Button -->
+                  <button
+                    v-if="!exporting && hasStatuses"
+                    class="bg-muted hover:bg-muted/80 text-foreground border border-border px-3 py-2 rounded-md font-medium text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                    @click="resetAllStatuses"
+                  >
+                    Reset
+                  </button>
+
+                  <!-- Main Action Buttons -->
+                  <template v-if="!exporting">
+                    <button
+                      class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium text-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                      :disabled="totalCount === 0"
+                      @click="startBatchDownload"
+                    >
+                      <FolderDown class="h-3.5 w-3.5" />
+                      {{ hasStatuses ? 'Resume Export' : 'Export ZIP' }}
+                    </button>
+                  </template>
+
+                  <template v-else>
+                    <!-- Pause Button -->
+                    <button
+                      v-if="!isPaused"
+                      class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-md font-medium text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                      @click="pauseBatchDownload"
+                    >
+                      <Pause class="h-3.5 w-3.5" />
+                      Pause
+                    </button>
+
+                    <!-- Resume & Stop/Package Buttons -->
+                    <template v-else>
+                      <button
+                        class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-md font-medium text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                        @click="resumeBatchDownload"
+                      >
+                        <Play class="h-3.5 w-3.5" />
+                        Resume
+                      </button>
+                      <button
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md font-medium text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                        @click="stopAndPackage"
+                      >
+                        <FolderDown class="h-3.5 w-3.5" />
+                        Package
+                      </button>
+                    </template>
+                  </template>
+                </div>
               </div>
             </div>
           </div>
