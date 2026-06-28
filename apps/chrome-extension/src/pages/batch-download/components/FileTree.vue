@@ -7,6 +7,8 @@ import {
   ChevronRight,
   Folder,
   FolderOpen,
+  Download,
+  Upload,
 } from 'lucide-vue-next'
 import { useInitLocale } from '../../shared/i18n'
 import FileTreeNode, {
@@ -30,6 +32,8 @@ const emit = defineEmits<{
   (e: 'update:selectedNodeId', val: string): void
   (e: 'retry', node: FileNode): void
   (e: 'skip', node: FileNode): void
+  (e: 'exportState'): void
+  (e: 'importState'): void
 }>()
 
 const searchQuery = ref('')
@@ -373,6 +377,20 @@ provide(DragDropKey, {
           @click="addFolder"
         >
           <FolderPlus class="h-4 w-4" />
+        </button>
+        <button
+          class="p-1.5 hover:bg-muted rounded-md text-muted-foreground hover:text-foreground transition-colors"
+          :title="t('batch_download.export_state')"
+          @click="emit('exportState')"
+        >
+          <Download class="h-4 w-4" />
+        </button>
+        <button
+          class="p-1.5 hover:bg-muted rounded-md text-muted-foreground hover:text-foreground transition-colors"
+          :title="t('batch_download.import_state')"
+          @click="emit('importState')"
+        >
+          <Upload class="h-4 w-4" />
         </button>
         <button
           class="p-1.5 hover:bg-muted rounded-md text-muted-foreground hover:text-foreground text-[10px] font-semibold transition-colors"

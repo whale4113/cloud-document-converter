@@ -71,6 +71,12 @@ export const i18n = createI18n({
       'batch_download.downloading':
         'Exporting... please do not close this tab.',
       'batch_download.complete': 'Export complete!',
+      'batch_download.export_state': 'Export Preview State',
+      'batch_download.import_state': 'Import Preview State',
+      'batch_download.import_state.success':
+        'Successfully imported preview state.',
+      'batch_download.import_state.invalid':
+        'Invalid preview state file format.',
     },
     'zh-CN': {
       general: '通用',
@@ -132,6 +138,10 @@ export const i18n = createI18n({
       'batch_download.status.failed': '失败',
       'batch_download.downloading': '正在导出，请勿关闭本页面。',
       'batch_download.complete': '导出完成！',
+      'batch_download.export_state': '导出预览状态',
+      'batch_download.import_state': '导入预览状态',
+      'batch_download.import_state.success': '已成功导入预览状态。',
+      'batch_download.import_state.invalid': '导入的文件格式不正确。',
     },
   },
 })

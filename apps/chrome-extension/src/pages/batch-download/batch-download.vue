@@ -768,6 +768,123 @@ const handleSkipFile = (file: FileNode) => {
     rootNode.value = { ...rootNode.value }
   }
 }
+
+// Ref for hidden file input
+const importFileInput = ref<HTMLInputElement | null>(null)
+
+// Validate imported tree structure recursively
+const validateTreeStructure = (node: any): boolean => {
+  if (!node || typeof node !== 'object') return false
+  if (typeof node.id !== 'string' || typeof node.name !== 'string') return false
+  if (node.type !== 'folder' && node.type !== 'file') return false
+  if (node.type === 'file') {
+    if (typeof node.url !== 'string') return false
+  } else {
+    if (!Array.isArray(node.children)) return false
+    for (const child of node.children) {
+      if (!validateTreeStructure(child)) return false
+    }
+  }
+  return true
+}
+
+// Reset node statuses on import to ensure a clean download slate
+const resetStatusesToPending = (node: TreeNode) => {
+  if (node.type === 'file') {
+    node.status = 'pending'
+    node.progress = undefined
+    node.error = undefined
+    node.tabId = undefined
+  } else if (node.type === 'folder') {
+    node.children.forEach(resetStatusesToPending)
+  }
+}
+
+// Export the current rootNode structure to a JSON file
+const handleExportState = () => {
+  try {
+    const jsonStr = JSON.stringify(rootNode.value, null, 2)
+    const blob = new Blob([jsonStr], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    const dateStr = new Date().toISOString().slice(0, 10)
+    a.href = url
+    a.download = `cdc-explorer-state-${dateStr}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+
+    const docCount = collectFileNodes(rootNode.value).length
+    addLog(
+      `Successfully exported preview directory state (${docCount} documents).`,
+      'success',
+    )
+  } catch (err: any) {
+    console.error('Failed to export preview state:', err)
+    addLog(
+      `Failed to export preview directory state: ${err.message || String(err)}`,
+      'error',
+    )
+  }
+}
+
+// Open the file selection dialog for importing a state JSON file
+const handleImportState = () => {
+  importFileInput.value?.click()
+}
+
+// Handle imported file parsing and validation
+const handleImportFileChange = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+
+  const reader = new FileReader()
+  reader.onload = async e => {
+    try {
+      const text = e.target?.result as string
+      const parsed = JSON.parse(text)
+
+      // Perform validation checks
+      const isValid =
+        validateTreeStructure(parsed) &&
+        parsed.id === 'root' &&
+        parsed.type === 'folder'
+      if (!isValid) {
+        addLog(t('batch_download.import_state.invalid'), 'error')
+        target.value = ''
+        return
+      }
+
+      // Reset statuses to pending to start fresh
+      resetStatusesToPending(parsed)
+
+      // Apply the imported state
+      rootNode.value = parsed
+      selectedNodeId.value = 'root'
+
+      const docCount = collectFileNodes(parsed).length
+      addLog(
+        `${t('batch_download.import_state.success')} (${docCount} documents)`,
+        'success',
+      )
+    } catch (err: any) {
+      console.error('Failed to parse imported JSON:', err)
+      addLog(
+        `${t('batch_download.import_state.invalid')}: ${err.message || String(err)}`,
+        'error',
+      )
+    } finally {
+      target.value = '' // Reset input value so the change event fires even if the same file is selected again
+    }
+  }
+
+  reader.onerror = () => {
+    addLog('Failed to read file from disk.', 'error')
+    target.value = ''
+  }
+
+  reader.readAsText(file)
+}
 </script>
 
 <template>
@@ -817,6 +934,8 @@ const handleSkipFile = (file: FileNode) => {
           class="flex-1"
           @retry="handleRetryFile"
           @skip="handleSkipFile"
+          @export-state="handleExportState"
+          @import-state="handleImportState"
         />
       </section>
 
@@ -1032,5 +1151,12 @@ const handleSkipFile = (file: FileNode) => {
         </div>
       </section>
     </main>
+    <input
+      ref="importFileInput"
+      type="file"
+      accept=".json"
+      class="hidden"
+      @change="handleImportFileChange"
+    />
   </div>
 </template>
