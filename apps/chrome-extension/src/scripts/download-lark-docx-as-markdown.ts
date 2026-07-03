@@ -1,6 +1,12 @@
 import i18next from 'i18next'
 import { Toast, Docx, docx, type mdast } from '@dolphin/lark'
-import { Minute, OneHundred, Second, waitFor } from '@dolphin/common'
+import {
+  Minute,
+  OneHundred,
+  Second,
+  waitFor,
+  blobToBase64,
+} from '@dolphin/common'
 import { fileSave, supported } from 'browser-fs-access'
 import { fs, configure } from '@zip.js/zip.js'
 import { safeNormalizeFileName } from '@/lib/utils'
@@ -156,11 +162,17 @@ const downloadImage = async (
     signal?: AbortSignal
     useUUID?: boolean
     markdownFileName?: string
+    encodeImageAsBase64?: boolean
   } = {},
 ): Promise<DownloadResult | null> => {
   if (!image.data) return null
 
-  const { signal, useUUID = false, markdownFileName = '' } = options
+  const {
+    signal,
+    useUUID = false,
+    markdownFileName = '',
+    encodeImageAsBase64 = false,
+  } = options
 
   const { name: originName, fetchSources, fetchBlob } = image.data
 
@@ -175,6 +187,11 @@ const downloadImage = async (
 
           const content = await fetchBlob()
           if (!content) return null
+
+          if (encodeImageAsBase64 && content.size < 100 * 1024) {
+            image.url = await blobToBase64(content)
+            return null
+          }
 
           const baseName = markdownFileName
             ? `${markdownFileName}-diagram.png`
@@ -238,6 +255,11 @@ const downloadImage = async (
                 })
               },
             })
+
+            if (encodeImageAsBase64 && blob.size < 100 * 1024) {
+              image.url = await blobToBase64(blob)
+              return null
+            }
 
             image.url = filename
 
@@ -381,6 +403,7 @@ const downloadFiles = async (
     signal?: AbortSignal
     useUUID?: boolean
     markdownFileName?: string
+    encodeImageAsBase64?: boolean
   } = {},
 ): Promise<DownloadResult[]> => {
   const {
@@ -390,6 +413,7 @@ const downloadFiles = async (
     signal,
     useUUID = false,
     markdownFileName = '',
+    encodeImageAsBase64 = false,
   } = options
 
   let completeEventCalled = false
@@ -425,6 +449,7 @@ const downloadFiles = async (
                       signal,
                       useUUID,
                       markdownFileName,
+                      encodeImageAsBase64,
                     })
                   : await downloadFile(file, {
                       signal,
@@ -551,6 +576,7 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
     SettingKey.Grid,
     SettingKey.TextHighlight,
     SettingKey.DownloadFileWithUniqueName,
+    SettingKey.EncodeImageAsBase64,
   ])
 
   const { root, images, files, tableWithParents, mentionUsers } =
@@ -611,6 +637,7 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
           signal,
           useUUID: settings[SettingKey.DownloadFileWithUniqueName],
           markdownFileName: recommendName,
+          encodeImageAsBase64: settings[SettingKey.EncodeImageAsBase64],
         }),
         // Diagrams must be downloaded one by one
         downloadFiles(diagrams, {
@@ -618,6 +645,7 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
           signal,
           useUUID: settings[SettingKey.DownloadFileWithUniqueName],
           markdownFileName: recommendName,
+          encodeImageAsBase64: settings[SettingKey.EncodeImageAsBase64],
         }),
         downloadFiles(files, {
           onProgress: progress => {
