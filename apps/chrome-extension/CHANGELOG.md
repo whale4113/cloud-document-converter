@@ -1,5 +1,20 @@
 # @dolphin/chrome-extension
 
+## 1.11.0
+
+### Minor Changes
+
+- [#138](https://github.com/whale4113/cloud-document-converter/pull/138) [`8928c8e`](https://github.com/whale4113/cloud-document-converter/commit/8928c8e1f0bb202a4a2698c82a360aeae1fdf20f) Thanks [@Royikiss](https://github.com/Royikiss)! - Add multi-page batch download feature, allowing users to extract and download multiple Lark documents as a single ZIP bundle
+
+### Patch Changes
+
+- [#138](https://github.com/whale4113/cloud-document-converter/pull/138) [`c909139`](https://github.com/whale4113/cloud-document-converter/commit/c909139715b414e47807d64d4019a84ad711d869) Thanks [@Royikiss](https://github.com/Royikiss)! - Add save and import preview directory state feature to CDC Explorer inside Batch Download Workbench.
+
+- [#138](https://github.com/whale4113/cloud-document-converter/pull/138) [`7f87bdd`](https://github.com/whale4113/cloud-document-converter/commit/7f87bddcc3e1dc84073e78fc3b89f633ef78eddb) Thanks [@Royikiss](https://github.com/Royikiss)! - feat: add status management, retry, skip, pause/resume to batch download
+  fix: strip invisible unicode characters from filenames to prevent extraction failure due to OS length limits
+
+- [#138](https://github.com/whale4113/cloud-document-converter/pull/138) [`e88abbf`](https://github.com/whale4113/cloud-document-converter/commit/e88abbfc5b7afcd2e5fceb51ea7d3fef2b808fb9) Thanks [@Royikiss](https://github.com/Royikiss)! - Fix batch download ZIP extraction failures by sanitizing entry paths and resolve 15B corrupt images by serializing binary assets via base64 Data URLs
+
 ## 1.10.8
 
 ### Patch Changes
