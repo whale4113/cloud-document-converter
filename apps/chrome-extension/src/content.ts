@@ -261,6 +261,25 @@ const initButtons = (): void => {
     return unmount
   }
 
+  const checkCapture = async () => {
+    try {
+      const { manualCaptureActive } = await chrome.storage.local.get(
+        'manualCaptureActive',
+      )
+      if (manualCaptureActive) {
+        chrome.runtime
+          .sendMessage({
+            type: 'CDC_CAPTURED_DOCUMENT',
+            url: window.location.href,
+            title: document.title || 'Untitled Document',
+          })
+          .catch(console.error)
+      }
+    } catch (e) {
+      console.error('Failed to report capture state:', e)
+    }
+  }
+
   let unmount: (() => void) | null = null
   const init = () => {
     // Rendering may be called multiple times
@@ -271,6 +290,7 @@ const initButtons = (): void => {
     }
 
     unmount = render()
+    void checkCapture()
   }
 
   const initObserver = new MutationObserver(mutations => {
@@ -334,3 +354,72 @@ if (import.meta.env.DEV) {
     console.log('MAIN World Console:', ...data)
   })
 }
+
+const isFeishuDocUrl = (urlStr: string): boolean => {
+  try {
+    const url = new URL(urlStr)
+    const hostname = url.hostname
+    const pathname = url.pathname
+
+    const isFeishuDomain =
+      hostname.endsWith('.feishu.cn') ||
+      hostname.endsWith('.feishu.net') ||
+      hostname.endsWith('.larksuite.com') ||
+      hostname.endsWith('.feishu-pre.net') ||
+      hostname.endsWith('.larkoffice.com') ||
+      hostname.endsWith('.larkenterprise.com')
+
+    if (!isFeishuDomain) return false
+
+    return (
+      pathname.includes('/docx/') ||
+      pathname.includes('/wiki/') ||
+      pathname.includes('/doc/')
+    )
+  } catch {
+    return false
+  }
+}
+
+document.addEventListener(
+  'click',
+  e => {
+    const handle = async () => {
+      try {
+        const { manualCaptureActive } = await chrome.storage.local.get(
+          'manualCaptureActive',
+        )
+        if (!manualCaptureActive) return
+
+        const target = e.target as HTMLElement
+        const anchor = target.closest('a')
+        if (anchor?.href) {
+          const url = anchor.href
+          if (isFeishuDocUrl(url)) {
+            if (anchor.target !== '_blank') {
+              window.open(url, '_blank')
+              e.preventDefault()
+              e.stopPropagation()
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error in manual capture click handler:', err)
+      }
+    }
+    void handle()
+  },
+  { capture: true },
+)
+
+window.addEventListener('message', event => {
+  if (event.source !== window) return
+  const data = event.data as Record<string, unknown> | null
+  if (data && data['type'] === 'CDC_EXTRACTED_DATA_INTERNAL') {
+    void chrome.runtime.sendMessage({
+      type: data['success'] ? 'CDC_EXTRACTION_SUCCESS' : 'CDC_EXTRACTION_ERROR',
+      data: data['data'],
+      error: data['error'],
+    })
+  }
+})

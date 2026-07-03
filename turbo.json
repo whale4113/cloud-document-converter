@@ -5,7 +5,7 @@
       "outputs": ["dist/**"],
       "dependsOn": ["^build"],
       "inputs": ["apps/chrome-extension/src/**/*", "packages/**/src/**/*"],
-      "cache": true
+      "cache": false
     },
     "type-check": {
       "dependsOn": ["^build"]

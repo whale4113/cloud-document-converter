@@ -1,13 +1,9 @@
 import i18next from 'i18next'
 import { Toast, Docx, docx, type mdast } from '@dolphin/lark'
 import { Minute, OneHundred, Second, waitFor } from '@dolphin/common'
-import { fileSave, supported } from 'browser-fs-access'
-import { fs, configure } from '@zip.js/zip.js'
 import { safeNormalizeFileName } from '@/lib/utils'
 import { cluster } from 'radash'
 import { CommonTranslationKey, en, Namespace, zh } from '../common/i18n'
-import { confirm } from '../common/notification'
-import { legacyFileSave } from '../common/legacy'
 import { reportBug } from '../common/issue'
 import {
   transformMentionUsers,
@@ -16,9 +12,7 @@ import {
   transformTableBySettings,
 } from '../common/utils'
 import { getSettings, Grid } from '../common/settings'
-import { DownloadMethod, SettingKey } from '@/common/settings'
-
-configure({ useWebWorkers: false })
+import { SettingKey } from '@/common/settings'
 
 const uniqueFileName = new UniqueFileName()
 
@@ -40,7 +34,7 @@ const enum TranslationKey {
   SCROLL_DOCUMENT = 'scroll_document',
 }
 
-enum ToastKey {
+const enum ToastKey {
   DOWNLOADING = 'downloading',
   REPORT_BUG = 'report_bug',
 }
@@ -52,20 +46,20 @@ i18next
       en: {
         translation: {
           [TranslationKey.CONTENT_LOADING]:
-            'Part of the content is still loading and cannot be downloaded at the moment. Please wait for loading to complete and retry',
-          [TranslationKey.UNKNOWN_ERROR]: 'Unknown error during download',
+            'Part of the content is still loading and cannot be extracted at the moment. Please wait for loading to complete and retry',
+          [TranslationKey.UNKNOWN_ERROR]: 'Unknown error during extraction',
           [TranslationKey.NOT_SUPPORT]:
-            'This is not a lark document page and cannot be downloaded as Markdown',
+            'This is not a lark document page and cannot be extracted',
           [TranslationKey.NOT_SUPPORT_DOC_1_0]:
-            'This is a old version lark document page and cannot be downloaded as Markdown',
+            'This is a old version lark document page and cannot be extracted',
           [TranslationKey.DOWNLOADING_FILE]:
-            'Download {{name}} in: {{progress}}% (please do not refresh or close the page)',
+            'Downloading {{name}} in: {{progress}}% (please do not refresh or close the page)',
           [TranslationKey.FAILED_TO_DOWNLOAD]: 'Failed to download {{name}}',
           [TranslationKey.STILL_SAVING]:
             'Still saving (please do not refresh or close the page)',
           [TranslationKey.DOWNLOAD_PROGRESS]:
             '{{name}} download progress: {{progress}} %',
-          [TranslationKey.DOWNLOAD_COMPLETE]: 'Download complete',
+          [TranslationKey.DOWNLOAD_COMPLETE]: 'Extraction complete',
           [TranslationKey.IMAGE]: 'Image',
           [TranslationKey.FILE]: 'File',
           [TranslationKey.CANCEL]: 'Cancel',
@@ -76,18 +70,17 @@ i18next
       zh: {
         translation: {
           [TranslationKey.CONTENT_LOADING]:
-            '部分内容仍在加载中，暂时无法下载。请等待加载完成后重试',
-          [TranslationKey.UNKNOWN_ERROR]: '下载过程中出现未知错误',
-          [TranslationKey.NOT_SUPPORT]:
-            '这不是一个飞书文档页面，无法下载为 Markdown',
+            '部分内容仍在加载中，暂时无法解析。请等待加载完成后重试',
+          [TranslationKey.UNKNOWN_ERROR]: '解析过程中出现未知错误',
+          [TranslationKey.NOT_SUPPORT]: '这不是一个飞书文档页面，无法解析',
           [TranslationKey.NOT_SUPPORT_DOC_1_0]:
-            '这是一个旧版飞书文档页面，无法下载为 Markdown',
+            '这是一个旧版飞书文档页面，无法解析',
           [TranslationKey.DOWNLOADING_FILE]:
             '下载 {{name}} 中：{{progress}}%（请不要刷新或关闭页面）',
           [TranslationKey.FAILED_TO_DOWNLOAD]: '下载 {{name}} 失败',
-          [TranslationKey.STILL_SAVING]: '仍在保存中（请不要刷新或关闭页面）',
+          [TranslationKey.STILL_SAVING]: '仍在解析中（请不要刷新或关闭页面）',
           [TranslationKey.DOWNLOAD_PROGRESS]: '{{name}}下载进度：{{progress}}%',
-          [TranslationKey.DOWNLOAD_COMPLETE]: '下载完成',
+          [TranslationKey.DOWNLOAD_COMPLETE]: '解析完成',
           [TranslationKey.IMAGE]: '图片',
           [TranslationKey.FILE]: '文件',
           [TranslationKey.CANCEL]: '取消',
@@ -142,12 +135,34 @@ async function toBlob(
     chunks.push(value)
     receivedLength += value.length
 
-    onProgress?.(receivedLength / contentLength)
+    if (contentLength > 0) {
+      onProgress?.(receivedLength / contentLength)
+    }
   }
 
   const blob = new Blob(chunks)
 
   return blob
+}
+
+const blobToDataURL = (blob: Blob): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      if (typeof reader.result === 'string') {
+        resolve(reader.result)
+      } else {
+        reject(new Error('Failed to convert blob to data URL'))
+      }
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
+}
+
+interface ExtractedFileResult {
+  filename: string
+  content: string
 }
 
 const downloadImage = async (
@@ -157,7 +172,7 @@ const downloadImage = async (
     useUUID?: boolean
     markdownFileName?: string
   } = {},
-): Promise<DownloadResult | null> => {
+): Promise<ExtractedFileResult | null> => {
   if (!image.data) return null
 
   const { signal, useUUID = false, markdownFileName = '' } = options
@@ -188,7 +203,7 @@ const downloadImage = async (
 
           return {
             filename,
-            content,
+            content: await blobToDataURL(content),
           }
         }
 
@@ -243,7 +258,7 @@ const downloadImage = async (
 
             return {
               filename,
-              content: blob,
+              content: await blobToDataURL(blob),
             }
           } finally {
             Toast.remove(filename)
@@ -286,14 +301,14 @@ const downloadFile = async (
     useUUID?: boolean
     markdownFileName?: string
   } = {},
-): Promise<DownloadResult | null> => {
+): Promise<ExtractedFileResult | null> => {
   if (!file.data?.name || !file.data.fetchFile) return null
 
   const { signal, useUUID = false, markdownFileName = '' } = options
 
   const { name, fetchFile } = file.data
 
-  let controller = new AbortController()
+  const controller = new AbortController()
 
   const cancel = () => {
     controller.abort()
@@ -330,7 +345,7 @@ const downloadFile = async (
 
           return {
             filename,
-            content: blob,
+            content: await blobToDataURL(blob),
           }
         } finally {
           Toast.remove(filename)
@@ -358,51 +373,40 @@ const downloadFile = async (
     { signal, onAbort: cancel },
   )
 
-  // @ts-expect-error remove reference
-  controller = null
-
   return result
 }
 
-interface DownloadResult {
-  filename: string
-  content: Blob
-}
-
-type File = mdast.Image | mdast.Link
-
 const downloadFiles = async (
-  files: File[],
-  options: ProgressOptions & {
-    /**
-     * @default 3
-     */
-    batchSize?: number
+  files: (mdast.Image | mdast.Link)[],
+  options: {
+    batchSize: number
+    onProgress?: (progress: number) => void
+    onComplete?: () => void
     signal?: AbortSignal
     useUUID?: boolean
     markdownFileName?: string
-  } = {},
-): Promise<DownloadResult[]> => {
+  },
+): Promise<ExtractedFileResult[]> => {
   const {
+    batchSize,
     onProgress,
     onComplete,
-    batchSize = 3,
     signal,
     useUUID = false,
     markdownFileName = '',
   } = options
 
-  let completeEventCalled = false
+  let completed = false
   const onCompleteOnce = () => {
-    if (!completeEventCalled) {
-      completeEventCalled = true
+    if (!completed) {
+      completed = true
       onComplete?.()
     }
   }
 
   const results = await withSignal(
     async isAborted => {
-      const _results: DownloadResult[] = []
+      const _results: ExtractedFileResult[] = []
 
       const totalSize = files.length
       let downloadedSize = 0
@@ -525,14 +529,12 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
 
   if (docx.isDoc) {
     Toast.warning({ content: i18next.t(TranslationKey.NOT_SUPPORT_DOC_1_0) })
-
-    throw new Error(DOWNLOAD_ABORTED)
+    throw new Error(i18next.t(TranslationKey.NOT_SUPPORT_DOC_1_0))
   }
 
   if (!docx.isDocx) {
     Toast.warning({ content: i18next.t(TranslationKey.NOT_SUPPORT) })
-
-    throw new Error(DOWNLOAD_ABORTED)
+    throw new Error(i18next.t(TranslationKey.NOT_SUPPORT))
   }
 
   const { isReady, recoverScrollTop } = await prepare()
@@ -541,8 +543,7 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
     Toast.warning({
       content: i18next.t(TranslationKey.CONTENT_LOADING),
     })
-
-    throw new Error(DOWNLOAD_ABORTED)
+    throw new Error(i18next.t(TranslationKey.CONTENT_LOADING))
   }
 
   const settings = await getSettings([
@@ -567,129 +568,115 @@ const main = async (options: { signal?: AbortSignal } = {}) => {
   const recommendName = docx.pageTitle
     ? safeNormalizeFileName(docx.pageTitle.slice(0, OneHundred))
     : 'doc'
-  const isZip = images.length > 0 || files.length > 0
-  const ext = isZip ? '.zip' : '.md'
-  const filename = `${recommendName}${ext}`
 
-  const toBlob = async () => {
-    Toast.loading({
-      content: i18next.t(TranslationKey.STILL_SAVING),
-      keepAlive: true,
-      key: ToastKey.DOWNLOADING,
-    })
+  Toast.loading({
+    content: i18next.t(TranslationKey.STILL_SAVING),
+    keepAlive: true,
+    key: ToastKey.DOWNLOADING,
+  })
 
-    const singleFileContent = () => {
-      transformTableBySettings(tableWithParents, settings)
+  const imgs = images.filter(image => image.data?.fetchSources)
+  const diagrams = images.filter(image => image.data?.fetchBlob)
 
-      const markdown = Docx.stringify(root)
+  const results = await Promise.all([
+    downloadFiles(imgs, {
+      batchSize: 15,
+      onProgress: progress => {
+        Toast.loading({
+          content: i18next.t(TranslationKey.DOWNLOAD_PROGRESS, {
+            name: i18next.t(TranslationKey.IMAGE),
+            progress: Math.floor(progress * OneHundred),
+          }),
+          keepAlive: true,
+          key: TranslationKey.IMAGE,
+        })
+      },
+      onComplete: () => {
+        Toast.remove(TranslationKey.IMAGE)
+      },
+      signal,
+      useUUID: settings[SettingKey.DownloadFileWithUniqueName],
+      markdownFileName: recommendName,
+    }),
+    downloadFiles(diagrams, {
+      batchSize: 1,
+      signal,
+      useUUID: settings[SettingKey.DownloadFileWithUniqueName],
+      markdownFileName: recommendName,
+    }),
+    downloadFiles(files, {
+      batchSize: 5,
+      onProgress: progress => {
+        Toast.loading({
+          content: i18next.t(TranslationKey.DOWNLOAD_PROGRESS, {
+            name: i18next.t(TranslationKey.FILE),
+            progress: Math.floor(progress * OneHundred),
+          }),
+          keepAlive: true,
+          key: TranslationKey.FILE,
+        })
+      },
+      onComplete: () => {
+        Toast.remove(TranslationKey.FILE)
+      },
+      signal,
+      useUUID: settings[SettingKey.DownloadFileWithUniqueName],
+      markdownFileName: recommendName,
+    }),
+  ])
 
-      return new Blob([markdown])
-    }
+  const downloadedAssets = results.flat(1)
 
-    const zipFileContent = async () => {
-      const zipFs = new fs.FS()
+  transformTableBySettings(tableWithParents, settings)
 
-      const imgs = images.filter(image => image.data?.fetchSources)
-      const diagrams = images.filter(image => image.data?.fetchBlob)
+  const markdown = Docx.stringify(root)
 
-      const results = await Promise.all([
-        downloadFiles(imgs, {
-          batchSize: 15,
-          onProgress: progress => {
-            Toast.loading({
-              content: i18next.t(TranslationKey.DOWNLOAD_PROGRESS, {
-                name: i18next.t(TranslationKey.IMAGE),
-                progress: Math.floor(progress * OneHundred),
-              }),
-              keepAlive: true,
-              key: TranslationKey.IMAGE,
-            })
-          },
-          onComplete: () => {
-            Toast.remove(TranslationKey.IMAGE)
-          },
-          signal,
-          useUUID: settings[SettingKey.DownloadFileWithUniqueName],
-          markdownFileName: recommendName,
-        }),
-        // Diagrams must be downloaded one by one
-        downloadFiles(diagrams, {
-          batchSize: 1,
-          signal,
-          useUUID: settings[SettingKey.DownloadFileWithUniqueName],
-          markdownFileName: recommendName,
-        }),
-        downloadFiles(files, {
-          onProgress: progress => {
-            Toast.loading({
-              content: i18next.t(TranslationKey.DOWNLOAD_PROGRESS, {
-                name: i18next.t(TranslationKey.FILE),
-                progress: Math.floor(progress * OneHundred),
-              }),
-              keepAlive: true,
-              key: TranslationKey.FILE,
-            })
-          },
-          onComplete: () => {
-            Toast.remove(TranslationKey.FILE)
-          },
-          signal,
-          useUUID: settings[SettingKey.DownloadFileWithUniqueName],
-          markdownFileName: recommendName,
-        }),
-      ])
-      results.flat(1).forEach(({ filename, content }) => {
-        zipFs.addBlob(filename, content)
-      })
+  recoverScrollTop?.()
 
-      transformTableBySettings(tableWithParents, settings)
-
-      const markdown = Docx.stringify(root)
-
-      zipFs.addText(`${recommendName}.md`, markdown)
-
-      return await zipFs.exportBlob()
-    }
-
-    const content = isZip ? await zipFileContent() : singleFileContent()
-
-    recoverScrollTop?.()
-
-    return content
+  const result = {
+    title: recommendName,
+    files: [
+      {
+        path: `${recommendName}.md`,
+        content: markdown,
+        isBinary: false,
+      },
+      ...downloadedAssets.map(asset => ({
+        path: asset.filename,
+        content: asset.content,
+        isBinary: true,
+      })),
+    ],
   }
-
-  if (
-    settings[SettingKey.DownloadMethod] === DownloadMethod.ShowSaveFilePicker &&
-    supported
-  ) {
-    if (!navigator.userActivation.isActive) {
-      const confirmed = await confirm()
-      if (!confirmed) {
-        throw new Error(DOWNLOAD_ABORTED)
-      }
-    }
-
-    await fileSave(toBlob(), {
-      fileName: filename,
-      extensions: [ext],
-    })
-  } else {
-    const blob = await toBlob()
-
-    legacyFileSave(blob, {
-      fileName: filename,
-    })
-  }
+  console.log('[Diagnostic] extract-lark-docx.ts returning result:', {
+    title: result.title,
+    filesCount: result.files.length,
+    files: result.files.map(f => ({
+      path: f.path,
+      isBinary: f.isBinary,
+      contentType: typeof f.content,
+      contentLength: typeof f.content === 'string' ? f.content.length : 'N/A',
+    })),
+  })
+  return result
 }
 
 let controller = new AbortController()
 main({
   signal: controller.signal,
 })
-  .then(() => {
+  .then(result => {
     Toast.success({
       content: i18next.t(TranslationKey.DOWNLOAD_COMPLETE),
     })
+    window.postMessage(
+      {
+        type: 'CDC_EXTRACTED_DATA_INTERNAL',
+        success: true,
+        data: result,
+      },
+      '*',
+    )
   })
   .catch((error: unknown) => {
     const aborted =
@@ -708,15 +695,22 @@ main({
         duration: Minute,
         onActionClick: () => {
           reportBug(error)
-
           Toast.remove(ToastKey.REPORT_BUG)
         },
       })
     }
+
+    window.postMessage(
+      {
+        type: 'CDC_EXTRACTED_DATA_INTERNAL',
+        success: false,
+        error: String(error),
+      },
+      '*',
+    )
   })
   .finally(() => {
     Toast.remove(ToastKey.DOWNLOADING)
-
     // @ts-expect-error remove reference
     controller = null
   })
