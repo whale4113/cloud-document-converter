@@ -13,6 +13,7 @@ import {
 import { useInitLocale } from '../shared/i18n'
 import { useInitTheme } from '../shared/theme'
 import FileTree from './components/FileTree.vue'
+import WikiRefreshCard from './components/WikiRefreshCard.vue'
 import type {
   TreeNode,
   FolderNode,
@@ -672,8 +673,28 @@ const packageZip = async () => {
   }
 }
 
+// Optional: rebuild the tree from a Feishu wiki before a run
+const wikiRefreshCard = ref<InstanceType<typeof WikiRefreshCard> | null>(null)
+const preparingRun = ref(false)
+
+const applyRefreshedTree = (tree: FolderNode) => {
+  rootNode.value = tree
+  selectedNodeId.value = 'root'
+}
+
 // Actions from control panel
 const startBatchDownload = async () => {
+  if (preparingRun.value || exporting.value) return
+  // Clear first so a refresh's log lines stay visible for this run.
+  clearLogs()
+  preparingRun.value = true
+  try {
+    const proceed = (await wikiRefreshCard.value?.prepareRun()) ?? true
+    if (!proceed) return
+  } finally {
+    preparingRun.value = false
+  }
+
   const files = collectFileNodes(rootNode.value)
   if (files.length === 0) {
     addLog(
@@ -701,7 +722,6 @@ const startBatchDownload = async () => {
 
   exporting.value = true
   isPaused.value = false
-  clearLogs()
   addLog('Starting batch download process...', 'info')
 
   processNext()
@@ -1055,7 +1075,7 @@ const handleImportFileChange = (event: Event) => {
                   <template v-if="!exporting">
                     <button
                       class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium text-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                      :disabled="totalCount === 0"
+                      :disabled="totalCount === 0 || preparingRun"
                       @click="startBatchDownload"
                     >
                       <FolderDown class="h-3.5 w-3.5" />
@@ -1095,6 +1115,16 @@ const handleImportFileChange = (event: Event) => {
                 </div>
               </div>
             </div>
+
+            <!-- Wiki Refresh Card -->
+            <WikiRefreshCard
+              ref="wikiRefreshCard"
+              :tree="rootNode"
+              :busy="exporting"
+              :has-result="id => downloadResults.has(id)"
+              @apply="applyRefreshedTree"
+              @log="addLog"
+            />
           </div>
         </div>
 
